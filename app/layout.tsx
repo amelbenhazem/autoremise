@@ -3,6 +3,7 @@
 import '../styles/globals.css'
 import { Roboto } from 'next/font/google'
 import type { Metadata } from 'next'
+import styles from '@/styles/Layout.module.css';
 
 const roboto = Roboto({
   weight: ['400', '700'],
@@ -23,7 +24,12 @@ export default function RootLayout({
 }) {
   return (
     <html lang="fr" className={roboto.className}>
-      <body>{children}</body>
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="theme-color" content="#407ebe" />
+        <link rel="icon" href="/logo-192.png" />
+      </head>
+      <body className={styles.body}>{children}</body>
     </html>
   )
 }

@@ -5,7 +5,7 @@ const requiredFieldsMap: {
     };
   } = {
     ALBARAKA: {
-      chèque: [
+      cheque: [
         "Code banque", "Code agence", "N° de compte", "Clé de contrôle", "DIVISE",
         "Titulaire du compte", "Date de remise", "Nom du déposant", "CIN/PP/CSN",
         "N° Chèque", "Tireur", "Tiré", "Montant", "Réf. transaction", "Total Remise"
@@ -26,6 +26,18 @@ const requiredFieldsMap: {
         "Code banque", "Code agence", "N° de compte", "Clé de contrôle",
         "Titulaire du compte", "Date de remise", "Nom du déposant", "CIN/PP/CSN",
         "N° Effet", "Tireur", "Tiré", "Montant", "Total Remise"
+      ]
+    },
+    ZITOUNA: {
+      cheque: [
+        "Code banque", "Code agence", "N° de compte", "Clé de contrôle", "Total Remise",
+        "Titulaire du compte", "Date de remise", "nbre de cheques", "N° Chèque", 
+        "Agence", "Tireur", "Tiré", "Montant"
+      ],
+      effet: [
+        "Code banque", "Code agence", "N° de compte", "Clé de contrôle", "Total Remise",
+        "Titulaire du compte", "Date de remise", "nbre de cheques", "N° Effet", 
+        "Agence", "Tireur", "Tiré", "Montant"
       ]
     },
     // Ajoute d'autres banques ici si besoin
@@ -61,13 +73,18 @@ const requiredFieldsMap: {
   }
   
   // ✅ Validation d'une ligne de données
-  export function validateRow(row: any): string[] {
+  export function validateRow(row: any, bank?: string): string[] {
     const errors: string[] = [];
   
     // Nettoyage
     Object.keys(row).forEach(key => {
       row[key] = String(row[key]).trim();
     });
+
+    // Si le montant est vide ou à zéro, ignorer la validation (ligne de template)
+    if (!row["Montant"] || row["Montant"] === "0" || row["Montant"] === 0) {
+      return [];
+    }
   
     const codeBanque = row["Code banque"]?.padStart(2, "0") || "";
     const codeAgence = row["Code agence"]?.padStart(2, "0") || "";
@@ -99,8 +116,16 @@ const requiredFieldsMap: {
       errors.push("Date invalide");
     }
   
-    if (!row["Nom du déposant"]) errors.push("Nom du déposant manquant");
-    if (!/^\d{8}$/.test(row["CIN/PP/CSN"])) errors.push("CIN invalide");
+    // Validation spécifique selon la banque
+    if (bank === "ZITOUNA") {
+      // Pour ZITOUNA, certains champs sont optionnels ou ont des noms différents
+      if (!row["nbre de cheques"]) errors.push("nbre de cheques manquant");
+      if (!row["Agence"]) errors.push("Agence manquante");
+    } else {
+      // Validation standard pour les autres banques
+      if (!row["Nom du déposant"]) errors.push("Nom du déposant manquant");
+      if (!/^\d{8}$/.test(row["CIN/PP/CSN"])) errors.push("CIN invalide");
+    }
   
     // Remise chèque
     if ("N° Chèque" in row && !row["N° Chèque"]) errors.push("N° Chèque manquant");

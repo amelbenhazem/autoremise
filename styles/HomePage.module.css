@@ -1,0 +1,213 @@
+/* styles/HomePage.module.css */
+.root {
+  min-height: 100vh;
+  background: radial-gradient(ellipse at top left, #F4F4F5 20%, #1A1C53 80%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: 2rem;
+}
+
+@keyframes gradientBG {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+.header {
+  width: 100%;
+  max-width: 64rem;
+}
+.main {
+  width: 100%;
+  max-width: 64rem;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+}
+.carte {
+  width: 100%;
+  padding: 2rem;
+  background: #fff;
+  border-radius: 1.5rem;
+  box-shadow: 0 2px 8px rgba(38,37,86,0.07);
+}
+.grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+}
+.label {
+  display: block;
+  color: var(--color-blue-dark);
+  font-weight: bold;
+  margin-bottom: 0.5rem;
+}
+.select {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: #f3f3f3;
+  color: #262556;
+  border-radius: 0.75rem;
+  border: 1.5px solid #a6a6a6;
+  font-size: 1.05rem;
+  font-weight: 500;
+  outline: none;
+  transition: border 0.2s;
+  appearance: none;
+}
+
+.select:focus {
+  border-color: var(--color-blue-medium);
+}
+
+.select.error,
+.select:invalid {
+  border-color: #ff3b3b;
+}
+
+.select::placeholder {
+  color: #bbb;
+  opacity: 1;
+}
+.dropzone {
+  width: 100%;
+  padding: 2rem;
+  background: #fff;
+  border-radius: 1.5rem;
+  box-shadow: 0 2px 8px rgba(38,37,86,0.07);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border: 2px dashed var(--color-blue-dark);
+  color: var(--color-blue-dark);
+}
+.dropzoneActive {
+  border-color: var(--color-blue-medium);
+}
+.dropzoneInactive {
+  border-color: var(--color-blue-dark);
+}
+.dropzoneDisabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+.button {
+  background: var(--color-blue-medium);
+  color: #fff;
+  font-weight: 600;
+  font-size: 1.1rem;
+  padding: 0.75rem 2.5rem;
+  border: none;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.2s;
+  box-shadow: 0 2px 8px rgba(38,37,86,0.07);
+  outline: none;
+  display: inline-block;
+  width: 100%;
+  max-width: 320px;
+  margin: 0 auto;
+}
+.button:hover,
+.button:focus {
+  background: var(--color-blue-dark);
+}
+.button:disabled {
+  background: #a6a6a6;
+  color: #fff;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+.progressContainer {
+  width: 100%;
+  padding: 2rem;
+  background: #fff;
+  border-radius: 1.5rem;
+  box-shadow: 0 2px 8px rgba(38,37,86,0.07);
+}
+.progressBarBg {
+  width: 100%;
+  background: var(--color-blue-light);
+  border-radius: 1rem;
+  height: 0.625rem;
+  margin-top: 0.5rem;
+}
+.progressBar {
+  background: var(--color-blue-medium);
+  height: 0.625rem;
+  border-radius: 1rem;
+}
+.status {
+  width: 100%;
+  padding: 1rem;
+  background: #f9f9f9;
+  color: var(--color-blue-dark);
+  border-radius: 1rem;
+  box-shadow: 0 2px 8px rgba(38,37,86,0.07);
+  border: 1px solid #e0e0e0;
+}
+.statusTitle {
+  font-weight: bold;
+}
+.statusList {
+  list-style: disc;
+  margin-left: 1.5rem;
+  margin-top: 0.5rem;
+}
+.printButton {
+  padding: 1rem 2rem;
+  border-radius: 0.5rem;
+  font-size: 1.125rem;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background 0.2s;
+  border: none;
+}
+.printButtonEnabled {
+  background: var(--color-blue-dark);
+  color: #fff;
+}
+.printButtonEnabled:hover {
+  background: var(--color-blue-medium);
+}
+.printButtonDisabled {
+  background: #e0e0e0;
+  color: #aaa;
+  cursor: not-allowed;
+}
+.footer {
+  width: 100%;
+  max-width: 64rem;
+  display: flex;
+  justify-content: flex-end;
+}
+.footerButton {
+  padding: 1rem 2rem;
+  background: var(--color-orange);
+  color: #fff;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  transition: background 0.2s;
+  border: none;
+  position: fixed;
+  right: 2rem;
+  bottom: 2rem;
+  box-shadow: 0 2px 8px rgba(38,37,86,0.07);
+}
+.footerButton:hover {
+  background: #d99a0c;
+} 

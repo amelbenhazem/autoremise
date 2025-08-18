@@ -1,0 +1,84 @@
+/* styles/TemplateEditor.module.css */
+.root {
+  padding: 24px;
+}
+.button {
+  margin-left: 8px;
+}
+.buttonFirst {
+  margin-left: 0;
+}
+.buttonRight {
+  margin-right: 8px;
+}
+.excelFileName {
+  margin-left: 8px;
+  color: #0070f3;
+}
+.zoneContainer {
+  position: relative;
+  margin-top: 24px;
+  border: 1px solid #ccc;
+  background: #f9f9f9;
+}
+.bgImage {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  position: absolute;
+  left: 0;
+  top: 0;
+}
+.zoneLabel {
+  font-weight: 600;
+  font-size: 13px;
+  color: #111;
+  margin-bottom: 2px;
+}
+.zoneLabelOption {
+  color: red;
+  margin-left: 6px;
+}
+.zoneDropdownLabel {
+  color: red;
+  font-weight: 600;
+  font-size: 13px;
+}
+.zoneDropdownOptions {
+  color: red;
+  font-size: 12px;
+  margin-top: 2px;
+  word-break: break-all;
+}
+.zoneDropdownSelect {
+  width: 90%;
+  margin: 2px;
+  border: 2px solid red;
+  color: red;
+}
+.zoneSelect {
+  width: 90%;
+  margin: 2px;
+  border: 2px solid #0070f3;
+  color: #0070f3;
+}
+.zoneInput {
+  width: 90%;
+  margin: 2px;
+}
+.zonePreview {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  background: rgba(255,255,255,0.7);
+  border-radius: 4px;
+  overflow: hidden;
+  text-align: center;
+  padding: 2px;
+}
+.zonePreviewNoData {
+  color: #aaa;
+} 

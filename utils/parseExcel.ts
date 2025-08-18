@@ -69,6 +69,21 @@ export async function parseExcel(file: File): Promise<{ rows: any[], dropdowns: 
       }
     }
   });
+  // Après la détection classique des dropdowns, forcer certains champs comme listes déroulantes pour ALBARAKA et ZITOUNA
+  const forcedDropdownFields = [
+    "N° Chèque", "Tireur", "Tiré", "Montant", "Réf. transaction", "N° Effet", "Agence"
+  ];
+  if (workbook && sheet && (headers.includes("N° Chèque") && headers.includes("Tireur"))) {
+    forcedDropdownFields.forEach(field => {
+      if (headers.includes(field) && !dropdowns[field]) {
+        // Extraire toutes les valeurs distinctes non vides de la colonne
+        const opts = Array.from(new Set(rows.map((row: any) => row[field]).filter((v: any) => v !== undefined && v !== null && v !== ''))) as string[];
+        if (opts.length > 0) {
+          dropdowns[field] = opts;
+        }
+      }
+    });
+  }
   console.log('Dropdowns détectés :', JSON.stringify(dropdowns, null, 2)); // Debug
   return { rows, dropdowns };
 }
