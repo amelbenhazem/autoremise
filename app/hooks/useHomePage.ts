@@ -11,31 +11,88 @@ export const useHomePage = () => {
   const [loading, setLoading] = useState(false);
   const [mapping, setMapping] = useState<any | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  // Force reload fix for AMEN mapping
+  console.log('useHomePage hook loaded - version 2.1');
 
   // Charger le mapping JSON après choix banque/type
   useEffect(() => {
     if (bank && type) {
-      const mappingPath = `/mappings/${bank}-${type}.json`;
-      console.log('Chargement du mapping depuis:', mappingPath);
-      fetch(mappingPath)
-        .then(res => {
-          console.log('Réponse fetch:', res.status, res.statusText);
-          if (!res.ok) throw new Error('Mapping non trouvé');
-          return res.json();
-        })
-        .then(json => {
-          console.log('Mapping chargé avec succès:', json);
-          setMapping(json);
-        })
-        .catch((error) => {
-          console.error('Erreur lors du chargement du mapping:', error);
+      // Éviter de recharger si le mapping actuel correspond déjà
+      const currentMappingKey = `${bank}-${type}`;
+      if (mapping && mapping._mappingKey === currentMappingKey) {
+        console.log('Mapping déjà chargé pour', currentMappingKey);
+        return;
+      }
+      
+      // Essayer plusieurs conventions de nommage pour compatibilité
+      const candidates = [
+        `/mappings/${bank}-${type}.json`,
+        `/mappings/${bank}-${type.toLowerCase()}.json`,
+        `/mappings/${type}_${bank}.json`,
+        `/mappings/${type.toLowerCase()}_${bank.toLowerCase()}.json`,
+      ];
+      // Cas particulier connu: effet ZITOUNA nommé "effet_zitouna.json"
+      if (bank.toUpperCase() === 'ZITOUNA' && type.toLowerCase() === 'effet') {
+        candidates.unshift('/mappings/effet_zitouna.json');
+      }
+      // Cas particulier connu: chèque BNA nommé "rcheque_bna.json"
+      if (bank.toUpperCase() === 'BNA' && type.toLowerCase() === 'cheque') {
+        candidates.unshift('/mappings/rcheque_bna.json');
+      }
+      // Cas particulier connu: effet BNA nommé "bnaeffet.json"
+      if (bank.toUpperCase() === 'BNA' && type.toLowerCase() === 'effet') {
+        candidates.unshift('/mappings/bnaeffet.json');
+      }
+      // Cas particulier connu: chèque AMEN nommé "amen_cheque.json"
+      if (bank.toUpperCase() === 'AMEN' && type.toLowerCase() === 'cheque') {
+        candidates.unshift('/mappings/amen_cheque.json');
+      }
+      // Cas particulier connu: effet AMEN nommé "effet_amen_bank.json"
+      if (bank.toUpperCase() === 'AMEN' && type.toLowerCase() === 'effet') {
+        candidates.unshift('/mappings/effet_amen_bank.json');
+        console.log('AMEN effet détecté, ajout de effet_amen_bank.json en priorité - v3');
+      }
+      // Cas particulier connu: chèque BANQUE DE TUNISIE nommé "chequetunisie.json"
+      if (bank.toUpperCase() === 'BANQUE DE TUNISIE' && type.toLowerCase() === 'cheque') {
+        candidates.unshift('/mappings/chequetunisie.json');
+      }
+      // Cas particulier connu: effet BANQUE DE TUNISIE nommé "effetbanktunisia.json"
+      if (bank.toUpperCase() === 'BANQUE DE TUNISIE' && type.toLowerCase() === 'effet') {
+        candidates.unshift('/mappings/effetbanktunisia.json');
+        console.log('BANQUE DE TUNISIE effet détecté, ajout de effetbanktunisia.json en priorité');
+      }
+      console.log('Tentatives de chargement mapping:', candidates);
+      let cancelled = false;
+      (async () => {
+        for (const path of candidates) {
+          if (cancelled) break;
+          try {
+            const res = await fetch(path);
+            if (!res.ok) throw new Error(`HTTP ${res.status}`);
+            const json = await res.json();
+            if (!cancelled) {
+              console.log('Mapping chargé avec succès depuis:', path);
+              setMapping({ ...json, _mappingKey: currentMappingKey });
+              return;
+            }
+          } catch (e) {
+            if (!cancelled) {
+              console.warn('Échec chargement mapping:', path, e);
+            }
+          }
+        }
+        if (!cancelled) {
+          console.error('Aucun mapping trouvé pour', bank, type);
           setMapping(null);
-        });
+        }
+      })();
+      return () => { cancelled = true; };
     } else {
       console.log('bank ou type manquant, mapping mis à null');
       setMapping(null);
     }
-  }, [bank, type]);
+  }, [bank, type, mapping?._mappingKey]);
 
   // Simule la progression d'upload
   useEffect(() => {
@@ -99,6 +156,7 @@ export const useHomePage = () => {
       handleExcelUpload(file);
     } else {
       console.log('🎯 Invalid file type:', file?.name, file?.type);
+      alert('Veuillez déposer un fichier Excel (.xlsx ou .xls)');
     }
   };
 
@@ -112,7 +170,12 @@ export const useHomePage = () => {
     const file = e.target.files?.[0];
     if (file) {
       console.log('🎯 File selected via input:', file.name);
-      handleExcelUpload(file);
+      if (file.name.endsWith('.xlsx') || file.name.endsWith('.xls')) {
+        handleExcelUpload(file);
+      } else {
+        alert('Veuillez sélectionner un fichier Excel (.xlsx ou .xls)');
+        e.target.value = '';
+      }
     }
   };
 

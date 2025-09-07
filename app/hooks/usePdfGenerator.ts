@@ -41,16 +41,22 @@ export const usePdfGenerator = () => {
       const font = await pdfDoc.embedFont('Helvetica');
       importedMapping.zones.forEach((zone: any) => {
         let value = '';
-        if (zone.optionValue) {
+        if (zone.optionValue !== undefined && zone.optionValue !== null && zone.optionValue !== '') {
           value = zone.optionValue;
+        } else if (row && zone.field && (row[zone.field] !== undefined && row[zone.field] !== null && row[zone.field] !== '')) {
+          value = row[zone.field];
+        } else if (Array.isArray(zone.options) && zone.options.length > 0) {
+          value = zone.options[0];
         } else {
-          value = row[zone.field] || '';
+          value = '';
         }
         
         const fontSize = Math.max(10, Math.min(zone.height, zone.width) / 2);
         const textWidth = font.widthOfTextAtSize(String(value), fontSize);
+        // Centrer le texte horizontalement dans la zone
         const x = zone.x + (zone.width - textWidth) / 2;
-        const y = bgHeight - zone.y - (zone.height - fontSize) / 2 - fontSize / 4;
+        // Position Y précise : inverser et ajuster pour la baseline
+        const y = bgHeight - zone.y - zone.height + fontSize;
         
         page.drawText(String(value), {
           x,

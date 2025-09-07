@@ -1,5 +1,5 @@
 'use client';
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Rnd } from 'react-rnd';
 import { saveAs } from 'file-saver';
 import { parseExcel } from '../../utils/parseExcel';
@@ -33,6 +33,30 @@ export default function TemplateEditor() {
 	const [bgWidth, setBgWidth] = useState<number>(800);
 	const [bgHeight, setBgHeight] = useState<number>(600);
 
+	// Initialiser le worker de PDF.js au montage (client-side)
+	useEffect(() => {
+		let cancelled = false;
+		(async () => {
+			try {
+				// @ts-expect-error: import dynamique sans types dédiés
+				let pdfjsLib: any;
+				try {
+					pdfjsLib = await import('pdfjs-dist/build/pdf.mjs');
+				} catch {
+					pdfjsLib = await import('pdfjs-dist/build/pdf');
+				}
+				if (!cancelled && pdfjsLib?.GlobalWorkerOptions) {
+					const version = pdfjsLib?.version || 'latest';
+					// Essayer d'abord la version ESM (.mjs) (non minifiée pour compatibilité unpkg)
+					pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${version}/build/pdf.worker.mjs`;
+				}
+			} catch {
+				// ignore
+			}
+		})();
+		return () => { cancelled = true; };
+	}, []);
+
 	const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
 		if (!file) return;
@@ -41,16 +65,31 @@ export default function TemplateEditor() {
 			reader.onload = async (ev) => {
 				const typedarray = new Uint8Array(ev.target?.result as ArrayBuffer);
 				// @ts-expect-error: pdfjs-dist n'a pas de types pour l'import dynamique
-				const pdfjsLib = await import('pdfjs-dist/build/pdf');
+				let pdfjsLib: any;
+				try {
+					pdfjsLib = await import('pdfjs-dist/build/pdf.mjs');
+				} catch {
+					pdfjsLib = await import('pdfjs-dist/build/pdf');
+				}
+				// Définir le worker de PDF.js si non configuré pour éviter l'erreur GlobalWorkerOptions.workerSrc
+				try {
+					if (pdfjsLib?.GlobalWorkerOptions && !pdfjsLib.GlobalWorkerOptions.workerSrc) {
+						const version = pdfjsLib?.version || 'latest';
+						pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${version}/build/pdf.worker.mjs`;
+					}
+				} catch {}
 				const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
 				const page = await pdf.getPage(1);
-				const viewport = page.getViewport({ scale: 1.5 });
+				const viewport = page.getViewport({ scale: 1.0 }); // Scale 1.0 pour correspondre exactement au PDF
 				const canvas = document.createElement('canvas');
 				canvas.width = viewport.width;
 				canvas.height = viewport.height;
 				const ctx = canvas.getContext('2d');
 				await page.render({ canvasContext: ctx!, viewport }).promise;
 				setPdfPageImage(canvas.toDataURL());
+				// Utiliser les dimensions exactes du PDF
+				setBgWidth(canvas.width);
+				setBgHeight(canvas.height);
 				setBgSrc(null);
 			};
 			reader.readAsArrayBuffer(file);
@@ -63,10 +102,15 @@ export default function TemplateEditor() {
 						const dataUrl = img.toDataURL();
 						setBgSrc(dataUrl);
 						setPdfPageImage(null);
+						// Utiliser les dimensions exactes de l'image
+						setBgWidth(img.width);
+						setBgHeight(img.height);
 					} else if (img instanceof window.HTMLImageElement) {
 						// fallback (rare)
 						setBgSrc(img.src);
 						setPdfPageImage(null);
+						setBgWidth(img.naturalWidth || bgWidth);
+						setBgHeight(img.naturalHeight || bgHeight);
 					} else {
 						alert('Erreur lors du chargement de l\'image.');
 					}
@@ -92,7 +136,7 @@ export default function TemplateEditor() {
 		Object.keys(excelData.dropdowns).forEach(col => {
 			if (excelData.dropdowns[col] && excelData.dropdowns[col].length > 0) {
 				addZonesForDropdown(col);
-			}
+			}//Shamash Information Technology
 		});
 	};
 
@@ -103,13 +147,78 @@ export default function TemplateEditor() {
 		try {
 			const json = JSON.parse(text);
 			setImportedMapping(json);
-			if (json.bgWidth && json.bgHeight) {
-				setBgWidth(json.bgWidth);
-				setBgHeight(json.bgHeight);
+			// Charger les zones et le fond dans la scène d'édition
+			if (Array.isArray(json.zones)) {
+				setZones(json.zones);
 			}
-			alert('importé');
+			if (json.background && typeof json.background === 'string') {
+				setBgSrc(json.background);
+				setPdfPageImage(null);
+			}
+			// Toujours utiliser les dimensions du mapping importé, avec des valeurs par défaut si manquantes
+			setBgWidth(json.bgWidth || 800);
+			setBgHeight(json.bgHeight || 600);
+			alert('Mapping importé avec succès');
 		} catch {
-			alert('Erreur ');
+			alert('Erreur lors de l\'importation du mapping');
+		}
+	};
+
+	const loadTunisiaMapping = async () => {
+		try {
+			const response = await fetch('/mappings/effetbanktunisia.json');
+			if (!response.ok) {
+				throw new Error(`Erreur HTTP: ${response.status} - ${response.statusText}`);
+			}
+			const json = await response.json();
+			setImportedMapping(json);
+			// Charger les zones et le fond dans la scène d'édition
+			if (Array.isArray(json.zones)) {
+				setZones(json.zones);
+			}
+			if (json.background && typeof json.background === 'string') {
+				setBgSrc(json.background);
+				setPdfPageImage(null);
+			}
+			// Utiliser les dimensions du mapping
+			setBgWidth(json.bgWidth || 800);
+			setBgHeight(json.bgHeight || 600);
+			alert(`Mapping Banque Tunisie chargé avec succès - ${json.zones?.length || 0} zones trouvées`);
+		} catch (error) {
+			alert(`Erreur lors du chargement du mapping Banque Tunisie: ${error.message}`);
+			console.error('Erreur détaillée:', error);
+		}
+	};
+
+	const handleTunisiaMappingFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+		const file = e.target.files?.[0];
+		if (!file) return;
+		
+		// Vérifier que c'est bien le fichier effetbanktunisia.json
+		if (!file.name.includes('effetbanktunisia')) {
+			alert('Veuillez sélectionner le fichier effetbanktunisia.json');
+			return;
+		}
+		
+		const text = await file.text();
+		try {
+			const json = JSON.parse(text);
+			setImportedMapping(json);
+			// Charger les zones et le fond dans la scène d'édition
+			if (Array.isArray(json.zones)) {
+				setZones(json.zones);
+			}
+			if (json.background && typeof json.background === 'string') {
+				setBgSrc(json.background);
+				setPdfPageImage(null);
+			}
+			// Utiliser les dimensions du mapping
+			setBgWidth(json.bgWidth || 800);
+			setBgHeight(json.bgHeight || 600);
+			alert(`Mapping Banque Tunisie chargé depuis le fichier - ${json.zones?.length || 0} zones trouvées`);
+		} catch (error) {
+			alert('Erreur lors de l\'importation du fichier mapping Banque Tunisie');
+			console.error('Erreur détaillée:', error);
 		}
 	};
 
@@ -118,13 +227,9 @@ export default function TemplateEditor() {
 			alert('image de fond ou donnes Excel manquants');
 			return;
 		}
-		// Récupérer la taille de l'image de fond
+		// Utiliser exactement les mêmes dimensions que l'éditeur
 		let editorWidth = bgWidth;
 		let editorHeight = bgHeight;
-		if (importedMapping.background && importedMapping.background.startsWith('data:image/')) {
-			// On peut essayer de lire la taille de l'image dynamiquement si besoin
-			// mais ici on prend la taille du state (déjà récupérée à l'import)
-		}
 		for (let i = 0; i < excelRows.length; i++) {
 			const row = excelRows[i];
 			const pdfDoc = await PDFDocument.create();
@@ -178,8 +283,10 @@ export default function TemplateEditor() {
 				}
 				const fontSize = Math.max(10, Math.min(zone.height, zone.width) / 2);
 				const textWidth = font.widthOfTextAtSize(String(value), fontSize);
+				// Centrer le texte horizontalement dans la zone
 				const x = zone.x + (zone.width - textWidth) / 2;
-				const y = editorHeight - zone.y - (zone.height - fontSize) / 2 - fontSize / 4;
+				// Position Y précise : inverser et ajuster pour la baseline
+				const y = editorHeight - zone.y - zone.height + fontSize;
 				page.drawText(String(value), {
 					x,
 					y,
@@ -246,8 +353,9 @@ export default function TemplateEditor() {
 				return zoneExport;
 			}),
 			...(importedMapping && importedMapping.table ? { table: importedMapping.table } : {}),
-			bgWidth,
-			bgHeight,
+			// Toujours inclure les dimensions actuelles de l'éditeur
+			bgWidth: bgWidth,
+			bgHeight: bgHeight,
 		};
 		const blobToSave = new Blob([JSON.stringify(mapping, null, 2)], { type: 'application/json' });
 		saveAs(blobToSave, 'template.json');
@@ -334,6 +442,19 @@ export default function TemplateEditor() {
 					<button onClick={() => mappingInputRef.current?.click()} className="px-4 py-2 bg-blue-500 text-white font-semibold rounded-lg shadow">
 						Importer un mapping JSON
 					</button>
+					<button onClick={loadTunisiaMapping} className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg shadow">
+						Charger Banque Tunisie
+					</button>
+					<input
+						type="file"
+						accept=".json"
+						id="tunisia-mapping-input"
+						style={{ display: 'none' }}
+						onChange={handleTunisiaMappingFile}
+					/>
+					<button onClick={() => document.getElementById('tunisia-mapping-input')?.click()} className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg shadow">
+						Charger Banque Tunisie (Fichier)
+					</button>
 					<button onClick={generatePDFs} disabled={!importedMapping || excelRows.length === 0} className="px-4 py-2 bg-blue-500 disabled:opacity-50 text-white font-semibold rounded-lg shadow">
 						Générer les PDF remplis
 					</button>
@@ -341,15 +462,25 @@ export default function TemplateEditor() {
 						{preview ? 'Masquer la prévisualisation' : 'Prévisualiser'}
 					</button>
 				</div>
-				<div className="relative mt-6 border border-gray-300 bg-gray-50 overflow-hidden" style={{ width: bgWidth, height: bgHeight }}>
+				<div className="flex justify-center items-center mt-6">
+					<div className="relative overflow-hidden border border-gray-200 shadow-lg" style={{ width: bgWidth, height: bgHeight }}>
 					{(bgSrc || pdfPageImage) && (
 						<img
 							src={bgSrc || pdfPageImage || ''}
 							alt="template background"
-							style={{ width: '100%', height: '100%', objectFit: 'contain', position: 'absolute', left: 0, top: 0 }}
+							style={{ 
+								width: '100%', 
+								height: '100%', 
+								objectFit: 'fill',
+								position: 'absolute', 
+								left: 0, 
+								top: 0,
+								zIndex: 1
+							}}
 						/>
 					)}
-					{zones.map(zone => (
+					{zones.map(zone => {
+						return (
 						<Rnd
 							key={zone.id}
 							size={{ width: zone.width, height: zone.height }}
@@ -358,8 +489,8 @@ export default function TemplateEditor() {
 							onResizeStop={(_, __, ref, ___, pos) => updateZone(zone.id, { width: ref.offsetWidth, height: ref.offsetHeight, x: pos.x, y: pos.y })}
 							bounds="parent"
 							style={{
-								border: selectedZone === zone.id ? '2px solid #0070f3' : '2px dashed #333',
-								background: 'rgba(255,255,255,0.3)',
+								border: selectedZone === zone.id ? '3px solid #0070f3' : '3px solid #ff0000',
+								background: 'rgba(255,255,255,0.9)',
 								zIndex: 2,
 							}}
 							onClick={() => setSelectedZone(zone.id)}
@@ -367,7 +498,16 @@ export default function TemplateEditor() {
 							enableResizing={!preview}
 						>
 							{zone.optionValue ? (
-								<div style={{ fontWeight: 600, fontSize: 13, color: '#111', marginBottom: 2 }}>
+								<div style={{ 
+									fontWeight: 600, 
+									fontSize: 13, 
+									color: '#111', 
+									marginBottom: 2,
+									background: 'rgba(255,255,255,0.9)',
+									padding: '2px 4px',
+									borderRadius: '2px',
+									textShadow: '1px 1px 2px rgba(0,0,0,0.3)'
+								}}>
 									{zone.field}
 									<span style={{ color: 'red', marginLeft: 6 }}>({zone.optionValue})</span>
 								</div>
@@ -440,7 +580,9 @@ export default function TemplateEditor() {
 								</div>
 							)}
 						</Rnd>
-					))}
+						);
+					})}
+					</div>
 				</div>
 			</div>
 		</div>

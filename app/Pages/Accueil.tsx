@@ -4,8 +4,7 @@ import Image from "next/image";
 import styles from '@/styles/HomePage.module.css';
 import { usePdfGenerator } from '../hooks';
 import { useHomePage } from '../hooks';
-import { UploadZone, FileList } from '../components';
-import { DragDropTest } from '../components/DragDropTest';
+import { UploadZone, FileList, PWAInstallPrompt, PWAStatus } from '../components';
 import { useRouter } from 'next/navigation';
 
 export default function Accueil() {
@@ -35,7 +34,13 @@ export default function Accueil() {
 
 	// Wrapper pour la génération de PDFs
 	const handleGeneratePDFs = async () => {
-		if (!mapping || !mapping.background || !mapping.zones || excelData.length < 2) {
+		console.log('🔍 Vérification des données pour génération PDF:');
+		console.log('- mapping:', !!mapping);
+		console.log('- mapping.background:', !!mapping?.background);
+		console.log('- mapping.zones:', mapping?.zones?.length || 0);
+		console.log('- excelData.length:', excelData.length);
+		
+		if (!mapping || !mapping.background || !mapping.zones || excelData.length < 1) {
 			alert('Mapping ou données Excel manquants');
 			return;
 		}
@@ -43,14 +48,15 @@ export default function Accueil() {
 		const editorWidth = mapping.bgWidth || 800;
 		const editorHeight = mapping.bgHeight || 600;
 		
-		// Ignorer l'en-tête (première ligne)
-		const dataRows = excelData.slice(1);
-		
-		await generatePDFsFromHook(mapping, dataRows, editorWidth, editorHeight);
+		// Les données sont déjà formatées avec les en-têtes comme clés
+		await generatePDFsFromHook(mapping, excelData, editorWidth, editorHeight);
 	};
 
 	return (
 		<div className="min-h-screen flex items-center justify-center bg-[#89ccff] px-2 sm:px-4 relative">
+			{/* Composants PWA */}
+			<PWAStatus />
+			<PWAInstallPrompt />
 			{/* Bouton Éditer template en haut à droite */}
 			<motion.button
 				initial={{ opacity: 0, y: -20 }}
@@ -69,7 +75,15 @@ export default function Accueil() {
 				transition={{ duration: 0.5 }}
 			>
 				<div className="flex flex-col items-center mb-6 sm:mb-8">
-					<Image src="/logo-shamashit.png" alt="Shamash Information Technology" width={140} height={60} className="w-32 sm:w-44 h-auto" />
+					<Image 
+						src="/logo-shamashit.png" 
+						alt="Shamash Information Technology" 
+						width={140} 
+						height={60} 
+						className="w-32 sm:w-44 h-auto" 
+						style={{ width: 'auto', height: 'auto' }}
+						priority
+					/>
 				</div>
 				{/* Step 1: Choix banque */}
 				<AnimatePresence>
@@ -89,10 +103,13 @@ export default function Accueil() {
 								className="w-full p-2 sm:p-3 rounded-xl border border-blue-300 focus:ring-2 focus:ring-blue-400 text-blue-900 text-base sm:text-lg"
 							>
 								<option value="" disabled hidden>Choisir une banque</option>
-								<option value="BIAT">BIAT</option>
+						
 								<option value="ATB">ATB</option>
+								<option value="AMEN">AMEN</option>
 								<option value="ALBARAKA">ALBARAKA</option>
 								<option value="ZITOUNA">ZITOUNA</option>
+								<option value="BNA">BNA</option>
+								<option value="BANQUE DE TUNISIE">BANQUE DE TUNISIE</option>
 							</select>
 						</motion.div>
 					)}
@@ -133,8 +150,6 @@ export default function Accueil() {
 								fileInputRef={fileInputRef}
 							/>
 							
-							{/* Composant de test temporaire */}
-							<DragDropTest />
 						</>
 					)}
 				</AnimatePresence>

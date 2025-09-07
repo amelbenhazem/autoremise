@@ -4,6 +4,16 @@ const requiredFieldsMap: {
       [type: string]: string[];
     };
   } = {
+    AMEN: {
+      cheque: [
+        "Compte numéro", "Titulaire de compte", "Nom émetteur", "Numéro chèque",
+        "Banque", "Localité", "Montant", "Total", "Date"
+      ],
+      effet: [
+        "Compte numéro", "Titulaire de compte", "Nom émetteur", "Numéro chèque",
+        "Banque", "Localité", "Montant", "Total"
+      ]
+    },
     ALBARAKA: {
       cheque: [
         "Code banque", "Code agence", "N° de compte", "Clé de contrôle", "DIVISE",
@@ -38,6 +48,15 @@ const requiredFieldsMap: {
         "Code banque", "Code agence", "N° de compte", "Clé de contrôle", "Total Remise",
         "Titulaire du compte", "Date de remise", "nbre de cheques", "N° Effet", 
         "Agence", "Tireur", "Tiré", "Montant"
+      ]
+    },
+    BNA: {
+      cheque: [
+        "Date", "Effectué par", "S'élevant par", "Numéro de compte", "Clé", "Code",
+        "Tireur", "Banque", "Montant", "Total", "valeur"
+      ],
+      effet: [
+        "Date", "Numéro de compte", "Clé", "Tiré", "lieu de payment", "Échéance", "Total", "Montant"
       ]
     },
     // Ajoute d'autres banques ici si besoin

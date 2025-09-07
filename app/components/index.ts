@@ -1,3 +1,4 @@
 export { UploadZone } from './UploadZone';
 export { FileList } from './FileList';
-export { DragDropTest } from './DragDropTest';
+export { PWAInstallPrompt } from './PWAInstallPrompt';
+export { PWAStatus } from './PWAStatus';
