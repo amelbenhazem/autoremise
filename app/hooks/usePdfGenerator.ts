@@ -6,12 +6,15 @@ export const usePdfGenerator = () => {
     importedMapping: any,
     excelRows: any[],
     bgWidth: number,
-    bgHeight: number
+    bgHeight: number,
+    options?: { drawBackground?: boolean }
   ) => {
     if (!importedMapping || !importedMapping.background || !importedMapping.zones || excelRows.length === 0) {
       alert('Image de fond ou données Excel manquants');
       return;
     }
+
+    const shouldDrawBackground = options?.drawBackground !== false;
 
     for (let i = 0; i < excelRows.length; i++) {
       const row = excelRows[i];
@@ -19,7 +22,7 @@ export const usePdfGenerator = () => {
       const page = pdfDoc.addPage([bgWidth, bgHeight]);
 
       // Ajouter l'image de fond
-      if (importedMapping.background && importedMapping.background.startsWith('data:image/')) {
+      if (shouldDrawBackground && importedMapping.background && importedMapping.background.startsWith('data:image/')) {
         const imgBytes = await dataUrlToArrayBuffer(importedMapping.background);
         
         if (importedMapping.background.startsWith('data:image/png')) {

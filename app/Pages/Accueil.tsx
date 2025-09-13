@@ -40,16 +40,77 @@ export default function Accueil() {
 		console.log('- mapping.zones:', mapping?.zones?.length || 0);
 		console.log('- excelData.length:', excelData.length);
 		
-		if (!mapping || !mapping.background || !mapping.zones || excelData.length < 1) {
-			alert('Mapping ou données Excel manquants');
+		if (!bank || !type) {
+			alert('Veuillez sélectionner une banque et un type.');
+			return;
+		}
+
+		if (!mapping || !mapping.background || !Array.isArray(mapping.zones) || mapping.zones.length === 0) {
+			alert('Mapping manquant ou incomplet pour la banque/type sélectionné.');
+			return;
+		}
+
+		if (!excelData || excelData.length === 0) {
+			alert('Aucune donnée Excel détectée.');
+			return;
+		}
+
+		// Normaliser les données Excel: si c'est un tableau de tableaux (header:1),
+		// convertir en objets { Header: value } pour compatibilité avec le mapping
+		let normalizedRows: any[] = [];
+		let headers: string[] = [];
+		if (Array.isArray(excelData[0])) {
+			headers = (excelData[0] as any[]).map(h => String(h ?? '').trim());
+			const dataRows = (excelData as any[]).slice(1);
+			normalizedRows = dataRows
+				.filter(r => Array.isArray(r))
+				.map((rowArr: any[]) => {
+					const obj: Record<string, any> = {};
+					headers.forEach((h, i) => {
+						if (h) obj[h] = rowArr[i];
+					});
+					return obj;
+				})
+				.filter(obj => Object.keys(obj).length > 0);
+		} else if (typeof excelData[0] === 'object' && excelData[0] !== null) {
+			normalizedRows = excelData as any[];
+			headers = Object.keys(normalizedRows[0] as Record<string, any>);
+		} else {
+			alert('Format de données Excel non reconnu.');
+			return;
+		}
+
+		if (normalizedRows.length === 0) {
+			alert('Le fichier Excel ne contient pas de lignes exploitables.');
+			return;
+		}
+
+		// Vérifier que le fichier Excel correspond bien au mapping (banque/type)
+		// Prendre seulement les champs dynamiques (sans optionValue fixée)
+		const requiredFields: string[] = (mapping.zones || [])
+			.filter((z: any) => typeof z?.field === 'string' && z.field.trim().length > 0 && (z.optionValue === undefined || z.optionValue === null || z.optionValue === ''))
+			.map((z: any) => z.field.trim());
+		const uniqueRequired: string[] = Array.from(new Set<string>(requiredFields));
+		const matched = uniqueRequired.filter(f => headers.includes(f));
+		// Exiger une correspondance forte: au moins 60% des champs requis ou au moins 3, selon le plus grand,
+		// mais si le mapping spécifie <=2 champs, exiger tous.
+		const totalRequired = uniqueRequired.length;
+		const threshold = totalRequired <= 2 ? totalRequired : Math.max(3, Math.ceil(totalRequired * 0.6));
+		if (matched.length < threshold) {
+			alert(
+				"Le fichier Excel ne correspond pas au format attendu pour la sélection: "
+				+ bank + " - " + type
+				+ "\nChamps reconnus: " + matched.length + "/" + totalRequired
+				+ "\nVeuillez importer un fichier provenant de la même banque/type, ou changez votre sélection."
+			);
 			return;
 		}
 		
 		const editorWidth = mapping.bgWidth || 800;
 		const editorHeight = mapping.bgHeight || 600;
 		
-		// Les données sont déjà formatées avec les en-têtes comme clés
-		await generatePDFsFromHook(mapping, excelData, editorWidth, editorHeight);
+		// Les données sont normalisées avec les en-têtes comme clés
+		await generatePDFsFromHook(mapping, normalizedRows, editorWidth, editorHeight, { drawBackground: false });
 	};
 
 	return (
@@ -104,7 +165,8 @@ export default function Accueil() {
 							>
 								<option value="" disabled hidden>Choisir une banque</option>
 						
-								<option value="ATB">ATB</option>
+						
+								
 								<option value="AMEN">AMEN</option>
 								<option value="ALBARAKA">ALBARAKA</option>
 								<option value="ZITOUNA">ZITOUNA</option>
