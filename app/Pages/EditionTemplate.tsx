@@ -1,20 +1,21 @@
 'use client';
 import React, { useEffect, useRef, useState } from 'react';
-import { Rnd } from 'react-rnd';
+// import { Rnd } from 'react-rnd';
+import { Zone } from '../../types/editor';
+import ZoneBox from '../components/ZoneBox';
+import Toolbar from '../components/Toolbar';
+import RecalculatePopup from '../components/RecalculatePopup';
+import DimensionsPanel from '../components/DimensionsPanel';
+import EditorCanvas from '../components/EditorCanvas';
 import { saveAs } from 'file-saver';
 import { parseExcel } from '../../utils/parseExcel';
 import { PDFDocument, rgb } from 'pdf-lib';
 import loadImage from 'blueimp-load-image';
+import { hasPermission } from '../hooks/roles';
+import { useRouter } from 'next/navigation';
+// Imports PDF supprimés - tout est maintenant dans usePdfGeneratorForced
+import { usePdfGeneratorForced } from '../hooks/usePdfGeneratorForced';
 
-interface Zone {
-	id: string;
-	x: number;
-	y: number;
-	width: number;
-	height: number;
-	field: string;
-	optionValue?: string;
-}
 
 export default function TemplateEditor() {
 	const [bgSrc, setBgSrc] = useState<string | null>(null);
@@ -30,15 +31,30 @@ export default function TemplateEditor() {
 	const mappingInputRef = useRef<HTMLInputElement>(null);
 	const [importedMapping, setImportedMapping] = useState<any | null>(null);
 	// Ajout du state pour la taille réelle de l'image de fond
-	const [bgWidth, setBgWidth] = useState<number>(800);
+	const [bgWidth, setBgWidth] = useState<number>(1200);
 	const [bgHeight, setBgHeight] = useState<number>(600);
+	const [showRecalculatePopup, setShowRecalculatePopup] = useState(false);
+	const [forceCmDimensions, setForceCmDimensions] = useState(false);
+	const [drawBackground, setDrawBackground] = useState(true); // 🔑 Option pour dessiner le fond
+	// Les anciens toggles de générateur sont supprimés; on utilise toujours le nouveau générateur
+	const router = useRouter();
+  	const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
+	
+	// 🔑 Utiliser les générateurs PDF
+	const { generatePDFs: generatePDFsForced } = usePdfGeneratorForced();
+
+	useEffect(() => {
+		if (!hasPermission('gererTemplates', currentUser)) {
+		router.push('/'); // redirection si pas la permission
+		}
+	}, []);
 
 	// Initialiser le worker de PDF.js au montage (client-side)
 	useEffect(() => {
 		let cancelled = false;
 		(async () => {
 			try {
-				// @ts-expect-error: import dynamique sans types dédiés
+				// ts-expect-error: import dynamique sans types dédiés
 				let pdfjsLib: any;
 				try {
 					pdfjsLib = await import('pdfjs-dist/build/pdf.mjs');
@@ -57,6 +73,34 @@ export default function TemplateEditor() {
 		return () => { cancelled = true; };
 	}, []);
 
+	// State pour les dimensions réelles en cm
+	const [realWidthCm, setRealWidthCm] = useState<number>(21);  // exemple A4 largeur
+	const [realHeightCm, setRealHeightCm] = useState<number>(29.7); // exemple A4 hauteur
+
+	// Fonction pour recalculer la zone en points
+	const recalcZoneSize = () => {
+		const pointsPerCm = 28.35; // 1 cm = 28.35 points
+		setBgWidth(realWidthCm * pointsPerCm);
+		setBgHeight(realHeightCm * pointsPerCm);
+	};
+
+	function calculateFontSize(text: string, width: number, height: number) {
+		let fontSize = Math.min(height / 2, width / 6);
+
+		const canvas = document.createElement("canvas");
+		const ctx = canvas.getContext("2d");
+		if (ctx) {
+			ctx.font = `${fontSize}px Arial`;
+			let textWidth = ctx.measureText(text).width;
+
+			while (textWidth > width - 8 && fontSize > 6) {
+				fontSize -= 1;
+				ctx.font = `${fontSize}px Arial`;
+				textWidth = ctx.measureText(text).width;
+			}
+		}
+		return fontSize;
+	}
 	const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
 		if (!file) return;
@@ -64,7 +108,7 @@ export default function TemplateEditor() {
 			const reader = new FileReader();
 			reader.onload = async (ev) => {
 				const typedarray = new Uint8Array(ev.target?.result as ArrayBuffer);
-				// @ts-expect-error: pdfjs-dist n'a pas de types pour l'import dynamique
+				// ts-expect-error: pdfjs-dist n'a pas de types pour l'import dynamique
 				let pdfjsLib: any;
 				try {
 					pdfjsLib = await import('pdfjs-dist/build/pdf.mjs');
@@ -77,7 +121,7 @@ export default function TemplateEditor() {
 						const version = pdfjsLib?.version || 'latest';
 						pdfjsLib.GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@${version}/build/pdf.worker.mjs`;
 					}
-				} catch {}
+				} catch { }
 				const pdf = await pdfjsLib.getDocument({ data: typedarray }).promise;
 				const page = await pdf.getPage(1);
 				const viewport = page.getViewport({ scale: 1.0 }); // Scale 1.0 pour correspondre exactement au PDF
@@ -103,8 +147,10 @@ export default function TemplateEditor() {
 						setBgSrc(dataUrl);
 						setPdfPageImage(null);
 						// Utiliser les dimensions exactes de l'image
-						setBgWidth(img.width);
-						setBgHeight(img.height);
+						// Forcer l'image à prendre exactement les dimensions du cadre
+						setBgWidth(prev => prev); // garde la largeur actuelle du cadre
+						setBgHeight(prev => prev); // garde la hauteur actuelle du cadre
+
 					} else if (img instanceof window.HTMLImageElement) {
 						// fallback (rare)
 						setBgSrc(img.src);
@@ -150,6 +196,15 @@ export default function TemplateEditor() {
 			// Charger les zones et le fond dans la scène d'édition
 			if (Array.isArray(json.zones)) {
 				setZones(json.zones);
+				
+				// ✅ Restaurer les dropdowns depuis les zones importées
+				const importedDropdowns: Record<string, string[]> = {};
+				json.zones.forEach((zone: any) => {
+					if (zone.field && zone.options !== undefined) {
+						importedDropdowns[zone.field] = zone.options;
+					}
+				});
+				setDropdowns(importedDropdowns);
 			}
 			if (json.background && typeof json.background === 'string') {
 				setBgSrc(json.background);
@@ -164,7 +219,7 @@ export default function TemplateEditor() {
 		}
 	};
 
-	const loadTunisiaMapping = async () => {
+		const loadTunisiaMapping = async () => {
 		try {
 			const response = await fetch('/mappings/effetbanktunisia.json');
 			if (!response.ok) {
@@ -175,6 +230,15 @@ export default function TemplateEditor() {
 			// Charger les zones et le fond dans la scène d'édition
 			if (Array.isArray(json.zones)) {
 				setZones(json.zones);
+				
+				// ✅ Restaurer les dropdowns depuis les zones importées
+				const importedDropdowns: Record<string, string[]> = {};
+				json.zones.forEach((zone: any) => {
+					if (zone.field && zone.options !== undefined) {
+						importedDropdowns[zone.field] = zone.options;
+					}
+				});
+				setDropdowns(importedDropdowns);
 			}
 			if (json.background && typeof json.background === 'string') {
 				setBgSrc(json.background);
@@ -185,7 +249,8 @@ export default function TemplateEditor() {
 			setBgHeight(json.bgHeight || 600);
 			alert(`Mapping Banque Tunisie chargé avec succès - ${json.zones?.length || 0} zones trouvées`);
 		} catch (error) {
-			alert(`Erreur lors du chargement du mapping Banque Tunisie: ${error.message}`);
+			const msg = (error instanceof Error) ? error.message : String(error);
+			alert(`Erreur lors du chargement du mapping Banque Tunisie: ${msg}`);
 			console.error('Erreur détaillée:', error);
 		}
 	};
@@ -193,13 +258,13 @@ export default function TemplateEditor() {
 	const handleTunisiaMappingFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
 		const file = e.target.files?.[0];
 		if (!file) return;
-		
+
 		// Vérifier que c'est bien le fichier effetbanktunisia.json
 		if (!file.name.includes('effetbanktunisia')) {
 			alert('Veuillez sélectionner le fichier effetbanktunisia.json');
 			return;
 		}
-		
+
 		const text = await file.text();
 		try {
 			const json = JSON.parse(text);
@@ -221,86 +286,41 @@ export default function TemplateEditor() {
 			console.error('Erreur détaillée:', error);
 		}
 	};
+	
 
-	const generatePDFs = async () => {
-		if (!importedMapping || !importedMapping.background || !importedMapping.zones || excelRows.length === 0) {
-			alert('image de fond ou donnes Excel manquants');
-			return;
-		}
-		// Utiliser exactement les mêmes dimensions que l'éditeur
-		let editorWidth = bgWidth;
-		let editorHeight = bgHeight;
-		for (let i = 0; i < excelRows.length; i++) {
-			const row = excelRows[i];
-			const pdfDoc = await PDFDocument.create();
-			const page = pdfDoc.addPage([editorWidth, editorHeight]);
-			if (importedMapping.background && importedMapping.background.startsWith('data:image/')) {
-				const dataUrlToArrayBuffer = async (dataUrl: string): Promise<ArrayBuffer> => {
-					try {
-						return await fetch(dataUrl).then(r => r.arrayBuffer());
-					} catch (e) {
-						const base64 = dataUrl.split(',')[1];
-						if (!base64 || base64.length % 4 !== 0) {
-							alert('Le data URL de l\'image de fond est mal formé ou corrompu. Merci de réexporter le mapping depuis l\'éditeur sans modification manuelle.');
-							throw new Error('Le data URL est mal formé ou corrompu.');
-						}
-						try {
-							const binary = atob(base64.replace(/\s/g, ''));
-							const len = binary.length;
-							const bytes = new Uint8Array(len);
-							for (let i = 0; i < len; i++) {
-								bytes[i] = binary.charCodeAt(i);
-							}
-							return bytes.buffer;
-						} catch (err) {
-							alert('Erreur lors du décodage base64 de l\'image de fond. Merci de réexporter le mapping.');
-							throw err;
-						}
-					}
-				};
-				const imgBytes = await dataUrlToArrayBuffer(importedMapping.background);
-				if (importedMapping.background.startsWith('data:image/png')) {
-					const img = await pdfDoc.embedPng(imgBytes);
-					page.drawImage(img, { x: 0, y: 0, width: editorWidth, height: editorHeight });
-				} else if (
-					importedMapping.background.startsWith('data:image/jpeg') ||
-					importedMapping.background.startsWith('data:image/jpg')
-				) {
-					const img = await pdfDoc.embedJpg(imgBytes);
-					page.drawImage(img, { x: 0, y: 0, width: editorWidth, height: editorHeight });
-				} else {
-					alert('Format d\'image non supporté pour le fond (seulement PNG ou JPEG)');
-					return;
-				}
-			}
-			const font = await pdfDoc.embedFont('Helvetica');
-			importedMapping.zones.forEach((zone: any) => {
-				let value = '';
-				if (zone.optionValue) {
-					value = zone.optionValue;
-				} else {
-					value = row[zone.field] || '';
-				}
-				const fontSize = Math.max(10, Math.min(zone.height, zone.width) / 2);
-				const textWidth = font.widthOfTextAtSize(String(value), fontSize);
-				// Centrer le texte horizontalement dans la zone
-				const x = zone.x + (zone.width - textWidth) / 2;
-				// Position Y précise : inverser et ajuster pour la baseline
-				const y = editorHeight - zone.y - zone.height + fontSize;
-				page.drawText(String(value), {
-					x,
-					y,
-					size: fontSize,
-					color: rgb(0, 0, 0),
-					maxWidth: zone.width,
-					font,
-				});
-			});
-			const pdfBytes = await pdfDoc.save();
-			const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-			saveAs(blob, `pdfrempli${i + 1}.pdf`);
-		}
+const calculatePdfFontSize = (text: string, zoneWidth: number, zoneHeight: number, font: any) => {
+	let fontSize = zoneHeight; // Commencer avec la hauteur max de la zone
+	while (fontSize > 1) {
+		const textWidth = font.widthOfTextAtSize(text, fontSize);
+		const textHeight = fontSize; // approximation : la hauteur ≈ fontSize
+		if (textWidth <= zoneWidth && textHeight <= zoneHeight) break;
+		fontSize -= 0.5; // réduire progressivement
+	}
+	return fontSize;
+};
+
+
+// Code PDF supprimé - tout est maintenant dans usePdfGeneratorForced
+
+	// 🔑 Fonction pour forcer les dimensions en cm
+	const handleForceCmDimensions = (width: number, height: number) => {
+		console.log(`🔑 Dimensions forcées en cm: ${width} x ${height}`);
+		setForceCmDimensions(true);
+		// Les dimensions sont déjà mises à jour par le DimensionsPanel
 	};
+
+	// 🔑 Fonction de génération PDF - toujours le nouveau générateur
+	const handleGeneratePDFs = async () => {
+		await generatePDFsForced(
+			importedMapping,
+			excelRows,
+			bgWidth,
+			bgHeight,
+			{ drawBackground, forceCmDimensions, currentBackgroundDataUrl: (bgSrc || pdfPageImage) ?? null },
+			zones
+		);
+	};
+
 
 	const addZone = () => {
 		setZones([
@@ -339,12 +359,13 @@ export default function TemplateEditor() {
 			background,
 			zones: zones.map(zone => {
 				let options: string[] | undefined = undefined;
-				if (dropdowns[zone.field] && dropdowns[zone.field].length > 0) {
+				// ✅ Inclure les listes déroulantes même si elles sont vides
+				if (dropdowns[zone.field] !== undefined) {
 					options = dropdowns[zone.field];
 				} else if (excelRows.length > 0 && zone.field) {
 					options = Array.from(new Set(excelRows.map(row => row[zone.field]).filter(v => v !== undefined && v !== null && v !== '')));
 				}
-				const zoneExport = options && options.length > 0
+				const zoneExport = options !== undefined
 					? { ...zone, options }
 					: { ...zone };
 				if (zone.optionValue) {
@@ -363,230 +384,138 @@ export default function TemplateEditor() {
 
 	const addZonesForDropdown = (col: string) => {
 		if (dropdowns[col] && dropdowns[col].length > 0) {
-			setZones(zones => {
-				const existing = new Set(zones.map(z => `${z.field}__${z.optionValue}`));
-				const newZones = dropdowns[col]
-					.filter(opt => !existing.has(`${col}__${opt}`))
-					.map(opt => ({
-						id: `${col}-${opt}-${Date.now()}-${Math.random()}`,
-						x: 50,
-						y: 50,
-						width: 120,
-						height: 40,
-						field: col,
-						optionValue: opt
-					}));
-				return [...zones, ...newZones];
-			});
+		  setZones((zones) => {
+			const existing = new Set(zones.map(z => `${z.field}__${z.optionValue}`));
+			const newZones = dropdowns[col]
+			  .filter(opt => !existing.has(`${col}__${opt}`))
+			  .map((opt, idx) => ({
+				id: `${col}-${opt}-${Date.now()}-${Math.random()}`,
+				x: 50,
+				y: 50 + idx * (40 + 8),
+				width: 120,
+				height: 40,
+				field: col,
+				optionValue: opt,
+			  }));
+			return [...zones, ...newZones];
+		  });
 		}
-	};
+	  };
+	  
 
 	return (
 		<div className="min-h-screen flex items-center justify-center bg-[#89ccff] px-2 sm:px-4 relative">
 			<div className="w-full max-w-7xl mx-auto p-4 sm:p-8 rounded-2xl sm:rounded-3xl shadow-2xl bg-white/90">
-				<input
-					type="file"
-					accept="image/*,application/pdf"
-					ref={fileInputRef}
-					style={{ display: 'none' }}
-					onChange={handleFileChange}
+				<div className="flex items-center justify-start my-4">
+  <button
+    onClick={() => router.back()}
+    className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 font-semibold rounded-lg shadow-sm transition"
+  >
+    {/* Icône flèche gauche */}
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      className="h-5 w-5"
+      fill="none"
+      viewBox="0 0 24 24"
+      stroke="currentColor"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+    </svg>
+    Retour
+  </button>
+</div>
+
+				<DimensionsPanel
+					bgWidth={bgWidth}
+					bgHeight={bgHeight}
+					setBgWidth={setBgWidth}
+					setBgHeight={setBgHeight}
+					onRecalculate={() => {
+						// Verrouiller le mode dimensions forcées à partir des valeurs saisies en cm
+						setForceCmDimensions(true);
+						setShowRecalculatePopup(true);
+					}}
+					onForceCmDimensions={handleForceCmDimensions}
 				/>
-				<div className="flex flex-wrap gap-2 mb-4">
-					<button onClick={() => fileInputRef.current?.click()} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg shadow">
-						Importer une image ou un PDF
-					</button>
-					<input
-						type="file"
-						accept=".xlsx,.xls"
-						id="excel-input"
-						style={{ display: 'none' }}
-						onChange={handleExcelChange}
-					/>
-					<button onClick={() => document.getElementById('excel-input')?.click()} className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg shadow">
-						Importer un fichier Excel
-					</button>
-					{excelFileName && (
-						<span className="text-blue-600">
-							Colonnes détectées dans {excelFileName} :{' '}
-							{excelColumns.map((col, idx) => (
-								<span key={col}>
-									{col}
-									{dropdowns[col] && dropdowns[col].length > 0 && (
-										<>
-											(<span className="text-red-600">{dropdowns[col].join(', ')}</span>)
-											<button className="ml-1 px-2 py-1 text-[10px] text-red-600 border border-gray-400 rounded bg-white"
-												onClick={() => addZonesForDropdown(col)}
-											>
-												+ zones
-											</button>
-										</>
-									)}
-									{idx < excelColumns.length - 1 ? ', ' : ''}
-								</span>
-							))}
-						</span>
-					)}
-					<button onClick={addZone} disabled={!bgSrc && !pdfPageImage} className="px-4 py-2 bg-blue-500 disabled:opacity-50 text-white font-semibold rounded-lg shadow">
-						Ajouter une zone
-					</button>
-					<button onClick={exportMapping} disabled={zones.length === 0} className="px-4 py-2 bg-blue-500 disabled:opacity-50 text-white font-semibold rounded-lg shadow">
-						Exporter le mapping JSON
-					</button>
-					<input
-						type="file"
-						accept="application/json"
-						ref={mappingInputRef}
-						style={{ display: 'none' }}
-						onChange={handleMappingChange}
-					/>
-					<button onClick={() => mappingInputRef.current?.click()} className="px-4 py-2 bg-blue-500 text-white font-semibold rounded-lg shadow">
-						Importer un mapping JSON
-					</button>
-					<button onClick={loadTunisiaMapping} className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white font-semibold rounded-lg shadow">
-						Charger Banque Tunisie
-					</button>
-					<input
-						type="file"
-						accept=".json"
-						id="tunisia-mapping-input"
-						style={{ display: 'none' }}
-						onChange={handleTunisiaMappingFile}
-					/>
-					<button onClick={() => document.getElementById('tunisia-mapping-input')?.click()} className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-lg shadow">
-						Charger Banque Tunisie (Fichier)
-					</button>
-					<button onClick={generatePDFs} disabled={!importedMapping || excelRows.length === 0} className="px-4 py-2 bg-blue-500 disabled:opacity-50 text-white font-semibold rounded-lg shadow">
-						Générer les PDF remplis
-					</button>
-					<button onClick={() => setPreview(p => !p)} disabled={excelRows.length === 0 || zones.length === 0 || (!bgSrc && !pdfPageImage)} className="px-4 py-2 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-semibold rounded-lg shadow">
-						{preview ? 'Masquer la prévisualisation' : 'Prévisualiser'}
-					</button>
-				</div>
-				<div className="flex justify-center items-center mt-6">
-					<div className="relative overflow-hidden border border-gray-200 shadow-lg" style={{ width: bgWidth, height: bgHeight }}>
-					{(bgSrc || pdfPageImage) && (
-						<img
-							src={bgSrc || pdfPageImage || ''}
-							alt="template background"
-							style={{ 
-								width: '100%', 
-								height: '100%', 
-								objectFit: 'fill',
-								position: 'absolute', 
-								left: 0, 
-								top: 0,
-								zIndex: 1
-							}}
+
+				{/* Option pour le fond */}
+				<div className="flex justify-center mb-4">
+					<label className="flex items-center gap-2 px-4 py-2 bg-gray-100 rounded-lg">
+						<input
+							type="checkbox"
+							checked={drawBackground}
+							onChange={(e) => setDrawBackground(e.target.checked)}
+							className="w-4 h-4"
 						/>
+						<span className="text-sm font-medium">Inclure le fond dans le PDF</span>
+					</label>
+				</div>
+
+			{/* Les boutons de bascule de générateur ont été retirés */}
+
+			{/* Input caché pour importer un mapping JSON */}
+			<input
+				type="file"
+				accept="application/json,.json"
+				ref={mappingInputRef}
+				style={{ display: 'none' }}
+				onChange={handleMappingChange}
+			/>
+
+
+
+
+
+					<Toolbar
+						excelFileName={excelFileName}
+						excelColumns={excelColumns}
+						dropdowns={dropdowns}
+						onAddZonesForDropdown={addZonesForDropdown}
+						onSelectImageOrPdf={handleFileChange}
+						onSelectExcel={handleExcelChange}
+						onAddZone={addZone}
+						addZoneDisabled={!bgSrc && !pdfPageImage}
+						onExportMapping={exportMapping}
+						exportDisabled={zones.length === 0}
+						onImportMappingClick={() => mappingInputRef.current?.click()}
+						onGeneratePDFs={handleGeneratePDFs}
+						generateDisabled={!importedMapping || excelRows.length === 0}
+						preview={preview}
+						togglePreview={() => setPreview(p => !p)}
+						previewDisabled={excelRows.length === 0 || zones.length === 0 || (!bgSrc && !pdfPageImage)}
+					/>
+
+					{/* Zone d'édition */}
+					<EditorCanvas
+						bgSrc={bgSrc}
+						pdfPageImage={pdfPageImage}
+						bgWidth={bgWidth}
+						bgHeight={bgHeight}
+						zones={zones}
+						selectedZone={selectedZone}
+						preview={preview}
+						firstRowByField={Object.fromEntries(Object.keys(dropdowns).map(f => [f, excelRows[0]?.[f]]))}
+						onUpdateZone={updateZone}
+						onSelectZone={setSelectedZone}
+					/>
+
+					{/* Popup recalcul */}
+					{showRecalculatePopup && (
+						<div className="relative bg-white rounded-xl p-4 shadow-lg text-center mx-auto mt-4 max-w-md">
+							<h3 className="text-yellow-600 font-bold text-lg mb-2"> Recalcul effectué !</h3>
+							<p>La zone a été recalculée selon les dimensions données.</p>
+							<button
+								className="mt-4 px-4 py-2 bg-yellow-500 text-white rounded-lg"
+								onClick={() => setShowRecalculatePopup(false)}
+							>
+								Fermer
+							</button>
+						</div>
 					)}
-					{zones.map(zone => {
-						return (
-						<Rnd
-							key={zone.id}
-							size={{ width: zone.width, height: zone.height }}
-							position={{ x: zone.x, y: zone.y }}
-							onDragStop={(_, d) => updateZone(zone.id, { x: d.x, y: d.y })}
-							onResizeStop={(_, __, ref, ___, pos) => updateZone(zone.id, { width: ref.offsetWidth, height: ref.offsetHeight, x: pos.x, y: pos.y })}
-							bounds="parent"
-							style={{
-								border: selectedZone === zone.id ? '3px solid #0070f3' : '3px solid #ff0000',
-								background: 'rgba(255,255,255,0.9)',
-								zIndex: 2,
-							}}
-							onClick={() => setSelectedZone(zone.id)}
-							disableDragging={preview}
-							enableResizing={!preview}
-						>
-							{zone.optionValue ? (
-								<div style={{ 
-									fontWeight: 600, 
-									fontSize: 13, 
-									color: '#111', 
-									marginBottom: 2,
-									background: 'rgba(255,255,255,0.9)',
-									padding: '2px 4px',
-									borderRadius: '2px',
-									textShadow: '1px 1px 2px rgba(0,0,0,0.3)'
-								}}>
-									{zone.field}
-									<span style={{ color: 'red', marginLeft: 6 }}>({zone.optionValue})</span>
-								</div>
-							) : dropdowns[zone.field] && dropdowns[zone.field].length > 0 && !preview ? (
-								<div style={{ width: '100%' }}>
-									<div style={{ color: 'red', fontWeight: 600, fontSize: 13 }}>{zone.field}</div>
-									<div style={{ color: 'red', fontSize: 12, marginTop: 2, wordBreak: 'break-all' }}>
-										{dropdowns[zone.field].join('; ')}
-									</div>
-									<select
-										value={zone.field}
-										onChange={e => updateZoneField(zone.id, e.target.value)}
-										style={{
-											width: '90%',
-											margin: 2,
-											border: '2px solid red',
-											color: 'red',
-										}}
-									>
-										<option value="">-- Associer à une colonne --</option>
-										{excelColumns.map(col => (
-											<option key={col} value={col}>{col}</option>
-										))}
-									</select>
-								</div>
-							) : excelColumns.length > 0 && !preview ? (
-								<div>
-									<select
-										value={zone.field}
-										onChange={e => updateZoneField(zone.id, e.target.value)}
-										style={{
-											width: '90%',
-											margin: 2,
-											border: '2px solid',
-											borderColor: dropdowns[zone.field] && dropdowns[zone.field].length > 0 ? 'red' : '#0070f3',
-											color: dropdowns[zone.field] && dropdowns[zone.field].length > 0 ? 'red' : '#0070f3'
-										}}
-									>
-										<option value="">-- Associer à une colonne --</option>
-										{excelColumns.map(col => (
-											<option key={col} value={col}>{col}</option>
-										))}
-									</select>
-								</div>
-							) : !preview ? (
-								<input
-									type="text"
-									placeholder="Nom du champ Excel"
-									value={zone.field}
-									onChange={e => updateZoneField(zone.id, e.target.value)}
-									style={{ width: '90%', margin: 2 }}
-								/>
-							) : (
-								<div style={{
-									width: '100%',
-									height: '100%',
-									display: 'flex',
-									alignItems: 'center',
-									justifyContent: 'center',
-									fontWeight: 600,
-									fontSize: Math.max(10, Math.min(zone.height, zone.width) / 2),
-									color: '#111',
-									background: 'rgba(255,255,255,0.7)',
-									borderRadius: 4,
-									overflow: 'hidden',
-									textAlign: 'center',
-									padding: 2,
-								}}>
-									{excelRows[0]?.[zone.field] || <span style={{ color: '#aaa' }}>Aucune donnée</span>}
-								</div>
-							)}
-						</Rnd>
-						);
-					})}
-					</div>
 				</div>
 			</div>
-		</div>
-	);
+			);
+
 }
 
 

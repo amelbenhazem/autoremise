@@ -3,46 +3,95 @@ const requiredFieldsMap: {
     [bank: string]: {
       [type: string]: string[];
     };
-  } = {
-    AMEN: {
-      cheque: [
-        "Compte numéro", "Titulaire de compte", "Nom émetteur", "Numéro chèque",
-        "Banque", "Localité", "Montant", "Total", "Date"
-      ],
-      effet: [
-        "Compte numéro", "Titulaire de compte", "Nom émetteur", "Numéro chèque",
-        "Banque", "Localité", "Montant", "Total"
-      ]
-    },
-    ALBARAKA: {
-      cheque: [
-        "Code banque", "Code agence", "N° de compte", "Clé de contrôle", "DIVISE",
-        "Titulaire du compte", "Date de remise", "Nom du déposant", "CIN/PP/CSN",
-        "N° Chèque", "Tireur", "Tiré", "Montant", "Réf. transaction", "Total Remise"
-      ],
-      effet: [
-        "Code banque", "Code agence", "N° de compte", "Clé de contrôle", "DIVISE",
-        "Titulaire du compte", "Date de remise", "Nom du déposant", "CIN/PP/CSN",
-        "N° Effet", "Tireur", "Tiré", "Montant", "Réf. effet", "Total Remise"
-      ]
-    },
+  } = {  UBCI: {
+    cheque: [
+      "etablissementpayeur",
+      "nom",
+      "adresse",
+      "rib2",
+      "montant",
+      "total",
+      "rib6",
+      "rib3",
+      "rib4",
+      "rib5"
+    ],
+    effet: [
+      "lieudepaiement",
+      "nom",
+      "adresse",
+      "rib2",
+      "montant",
+      "total",
+      "echance",
+      "rib3",
+      "rib4",
+      "rib5",
+      "rib6"
+    ]
+  },
+  AMEN: {
+    cheque: [
+      "Nom émetteur",
+      "Numéro chèque",
+      "Banque",
+      "Localité",
+      "Montant",
+      "Total",
+      "Compte numéro2",
+      "Compte numéro3"
+    ],
+    effet: [
+      "Compte numéro1",
+      "Titulaire de compte",
+      "Nom émetteur",
+      "Numéro chèque",
+      "Banque",
+      "Localité",
+      "Montant",
+      "Total",
+      "Compte numéro2",
+      "Compte numéro3"
+    ]
+  },
     BIAT: {
-      chèque: [
-        "Code banque", "Code agence", "N° de compte", "Clé de contrôle",
-        "Titulaire du compte", "Date de remise", "Nom du déposant", "CIN/PP/CSN",
-        "N° Chèque", "Tireur", "Tiré", "Montant", "Total Remise"
+      cheque: [
+        "etablissement payeur",
+        "nom",
+        "rib3",
+        "rib1",
+        "montant",
+        "total",
+        "numcheque",
+        "rib2",
+        "cle",
+        "nom tireur",
+        "refclient"
       ],
       effet: [
-        "Code banque", "Code agence", "N° de compte", "Clé de contrôle",
-        "Titulaire du compte", "Date de remise", "Nom du déposant", "CIN/PP/CSN",
-        "N° Effet", "Tireur", "Tiré", "Montant", "Total Remise"
+        "banque",
+        "nom",
+        "rib3",
+        "rib1",
+        "montant",
+        "total",
+        "numeffet",
+        "rib2",
+        "cle",
+        "tire",
+        "acc",
+        "code ptt",
+        "ville",
+        "code agence",
+        "echeance",
+        "date creation"
       ]
     },
     ZITOUNA: {
       cheque: [
         "Code banque", "Code agence", "N° de compte", "Clé de contrôle", "Total Remise",
-        "Titulaire du compte", "Date de remise", "nbre de cheques", "N° Chèque", 
-        "Agence", "Tireur", "Tiré", "Montant"
+        "Titulaire du compte", "Date de remise", "Montant", "N° Chèque", 
+        "Agence", "Tireur", "Tiré"
       ],
       effet: [
         "Code banque", "Code agence", "N° de compte", "Clé de contrôle", "Total Remise",
@@ -52,16 +101,98 @@ const requiredFieldsMap: {
     },
     BNA: {
       cheque: [
-        "Date", "Effectué par", "S'élevant par", "Numéro de compte", "Clé", "Code",
-        "Tireur", "Banque", "Montant", "Total", "valeur"
+        "Effectué Par",
+        "S’élevant à",
+        "Numéro Compte",
+        "cle",
+        "code",
+        "total",
+        "montant",
+        "Tireur",
+        "banque",
+        "valeur"
       ],
       effet: [
-        "Date", "Numéro de compte", "Clé", "Tiré", "lieu de payment", "Échéance", "Total", "Montant"
+        "lieudepaiement",
+        "Tire",
+        "Numéro Compte",
+        "cle",
+        "montant",
+        "total",
+        "echance"
+      ]
+    },
+    "BANK TUNISIE": {
+      cheque: [
+        "Comptea",
+        "Compteb",
+        "Comptec",
+        "Remisefaveur",
+        "effectueepar",
+        "cin",
+        "date",
+        "ville",
+        "numcheque",
+        "banque",
+        "montant",
+        "tireur",
+        "montanttotal"
+      ],
+      effet: [
+        "RIBa",
+        "RIBb",
+        "RIBc",
+        "RIBd",
+        "RIBe",
+        "Ouvert à (Agence)",
+        "Nom Bénéficiaire",
+        "Nom de la Partie Versante",
+        "CIN",
+        "Numéro Effet",
+        "Banque",
+        "Ville",
+        "Tiré",
+        "Échéance",
+        "Montant",
+        "Montant Total"
       ]
     },
     // Ajoute d'autres banques ici si besoin
   };
   
+  // ✅ Validation dédiée des en-têtes (liste de colonnes)
+  export function validateHeaders(headers: string[], bank: string, type: string): { missing: string[]; unexpected: string[] } {
+    const normalize = (s: string) =>
+      String(s || '')
+        .toLowerCase()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '') // accents
+        .replace(/\s+/g, '') // espaces
+        .replace(/[^a-z0-9]/g, ''); // ponctuation
+
+    const expected = requiredFieldsMap[bank]?.[type] || [];
+    const normalizedHeaders = headers.map(normalize);
+
+    const missing: string[] = [];
+    const unexpected: string[] = [];
+
+    // Champs manquants
+    expected.forEach((exp) => {
+      if (!normalizedHeaders.includes(normalize(exp))) {
+        missing.push(exp);
+      }
+    });
+
+    // Champs en trop (faible sévérité)
+    headers.forEach((h) => {
+      if (!expected.some((exp) => normalize(exp) === normalize(h))) {
+        unexpected.push(h);
+      }
+    });
+
+    return { missing, unexpected };
+  }
+
   // ✅ Validation des entêtes du fichier
   export function validateHeader(row: any, bank: string, type: string): string[] {
     const errors: string[] = [];

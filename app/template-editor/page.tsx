@@ -1,5 +1,7 @@
-import EditionTemplate from '../Pages/EditionTemplate';
+'use client';
+
+import TemplateEditor from "../Pages/EditionTemplate";
 
 export default function EditionTemplatePage() {
-  return <EditionTemplate />;
+  return <TemplateEditor />;
 }
