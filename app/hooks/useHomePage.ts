@@ -1,20 +1,21 @@
 import { useState, useEffect, useRef } from "react";
 import * as XLSX from "xlsx";
 
+// Hook personnalisé pour gérer la page d'accueil / workflow upload Excel
 export const useHomePage = () => {
-  const [step, setStep] = useState(0);
-  const [bank, setBank] = useState("");
-  const [type, setType] = useState("");
-  const [files, setFiles] = useState<File[]>([]);
-  const [excelData, setExcelData] = useState<any[]>([]);
-  const [uploadProgress, setUploadProgress] = useState<number[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [mapping, setMapping] = useState<any | null>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [step, setStep] = useState(0); // Étape actuelle du workflow (0 = sélection banque)
+  const [bank, setBank] = useState(""); // Banque sélectionnée
+  const [type, setType] = useState(""); // Type de document (ex: chèque, effet)
+  const [files, setFiles] = useState<File[]>([]); // Fichiers uploadés
+  const [excelData, setExcelData] = useState<any[]>([]); // Contenu du fichier Excel
+  const [uploadProgress, setUploadProgress] = useState<number[]>([]); // Progression d'upload simulée
+  const [loading, setLoading] = useState(false); // Indicateur de chargement
+  const [mapping, setMapping] = useState<any | null>(null); // Mapping JSON correspondant à banque/type
+  const fileInputRef = useRef<HTMLInputElement>(null); // Référence input fichier pour réinitialisation
 
   console.log("useHomePage hook loaded - version 2.3");
 
-  // ✅ Fonction resetUpload pour réinitialiser tout
+  //  Fonction pour réinitialiser complètement le workflow
   const resetUpload = () => {
     setStep(0);
     setBank("");
@@ -25,12 +26,12 @@ export const useHomePage = () => {
     setLoading(false);
     setMapping(null);
     if (fileInputRef.current) {
-      fileInputRef.current.value = "";
+      fileInputRef.current.value = ""; // Réinitialisation de l'input HTML
     }
-    console.log("Upload reset ✅");
+    console.log("Upload reset ");
   };
 
-  // Charger le mapping JSON après choix banque/type
+  // Charger le mapping JSON correspondant à la banque et au type
   useEffect(() => {
     if (bank && type) {
       const currentMappingKey = `${bank}-${type}`;
@@ -39,6 +40,7 @@ export const useHomePage = () => {
         return;
       }
 
+      // Liste des chemins possibles pour le mapping JSON
       const candidates = [
         `/mappings/${bank}-${type}.json`,
         `/mappings/${bank}-${type.toLowerCase()}.json`,
@@ -46,6 +48,7 @@ export const useHomePage = () => {
         `/mappings/${type.toLowerCase()}_${bank.toLowerCase()}.json`,
       ];
 
+      // Cas spéciaux : mapping pré-définis selon banque/type
       if (bank.toUpperCase() === "ZITOUNA" && type.toLowerCase() === "effet") {
         candidates.unshift("/mappings/effet_zitouna.json");
       }
@@ -63,26 +66,19 @@ export const useHomePage = () => {
       }
       if (bank.toUpperCase() === "AMEN" && type.toLowerCase() === "effet") {
         candidates.unshift("/mappings/effet_amen_bank.json");
-        console.log(
-          "AMEN effet détecté, ajout de effet_amen_bank.json en priorité"
-        );
+        console.log("AMEN effet détecté, ajout de effet_amen_bank.json en priorité");
       }
-      if (
-        bank.toUpperCase() === "BANQUE DE TUNISIE" &&
-        type.toLowerCase() === "cheque"
-      ) {
+      if (bank.toUpperCase() === "BANQUE DE TUNISIE" && type.toLowerCase() === "cheque") {
         candidates.unshift("/mappings/chequetunisie.json");
       }
-      if (
-        bank.toUpperCase() === "BANQUE DE TUNISIE" &&
-        type.toLowerCase() === "effet"
-      ) {
+      if (bank.toUpperCase() === "BANQUE DE TUNISIE" && type.toLowerCase() === "effet") {
         candidates.unshift("/mappings/effetbanktunisia.json");
       }
 
       console.log("Tentatives de chargement mapping:", candidates);
       let cancelled = false;
 
+      // Chargement asynchrone du mapping
       (async () => {
         for (const path of candidates) {
           if (cancelled) break;
@@ -108,7 +104,7 @@ export const useHomePage = () => {
       })();
 
       return () => {
-        cancelled = true;
+        cancelled = true; // Annule la boucle si le composant se démonte
       };
     } else {
       console.log("bank ou type manquant, mapping mis à null");
@@ -116,12 +112,12 @@ export const useHomePage = () => {
     }
   }, [bank, type, mapping?._mappingKey]);
 
-  // Simule la progression d'upload
+  // 🔹 Simulation de progression d'upload
   useEffect(() => {
     if (loading) {
       let progress = 0;
       const interval = setInterval(() => {
-        progress += Math.floor(Math.random() * 10) + 5;
+        progress += Math.floor(Math.random() * 10) + 5; // Incrément aléatoire
         if (progress >= 100) {
           progress = 100;
           setLoading(false);
@@ -133,20 +129,20 @@ export const useHomePage = () => {
     }
   }, [loading]);
 
-  // Handlers
+  // Handlers pour interactions utilisateur
   const handleBankChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setBank(e.target.value);
     setType("");
     setFiles([]);
     setExcelData([]);
-    setStep(1);
+    setStep(1); // Étape suivante après sélection banque
   };
 
   const handleTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setType(e.target.value);
     setFiles([]);
     setExcelData([]);
-    setStep(2);
+    setStep(2); // Étape suivante après sélection type
   };
 
   const handleExcelUpload = (file: File) => {
@@ -158,9 +154,9 @@ export const useHomePage = () => {
       const data = new Uint8Array(evt.target?.result as ArrayBuffer);
       const workbook = XLSX.read(data, { type: "array" });
       const sheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }); // Lire toutes les lignes
       setExcelData(rows);
-      setTimeout(() => setStep(3), 500);
+      setTimeout(() => setStep(3), 500); // Avance vers étape 3 après lecture Excel
     };
     reader.readAsArrayBuffer(file);
   };
@@ -176,7 +172,7 @@ export const useHomePage = () => {
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
+    e.preventDefault(); // Nécessaire pour autoriser le drop
   };
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -191,8 +187,9 @@ export const useHomePage = () => {
     }
   };
 
+  //  Retour des états et fonctions pour le composant
   return {
-    // État
+    // États
     step,
     bank,
     type,
@@ -211,7 +208,7 @@ export const useHomePage = () => {
     handleDragOver,
     handleFileInput,
 
-    // ✅ Expose resetUpload
+    // Réinitialisation complète
     resetUpload,
   };
 };

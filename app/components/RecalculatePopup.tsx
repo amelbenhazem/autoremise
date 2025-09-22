@@ -1,18 +1,26 @@
-'use client';
+'use client'; 
 import React from 'react';
-
 interface RecalculatePopupProps {
-  visible: boolean;
-  onClose: () => void;
+  visible: boolean; // permet de contrôler l'affichage de la popup
+  onClose: () => void; // fonction callback appelée lorsqu'on ferme la popup
 }
 
+//  Déclaration du composant fonctionnel
 const RecalculatePopup: React.FC<RecalculatePopupProps> = ({ visible, onClose }) => {
+
+  //  Si visible = false, on ne rend rien du tout (optimisation)
   if (!visible) return null;
+
   return (
+    // Conteneur principal de la popup
     <div className="relative bg-white rounded-xl p-4 shadow-lg text-center mx-auto mt-4 max-w-md">
       <h3 className="text-yellow-600 font-bold text-lg mb-2"> Recalcul effectué !</h3>
+
       <p>La zone a été recalculée selon les dimensions données.</p>
-      <button className="mt-4 px-4 py-2 bg-yellow-500 text-white rounded-lg" onClick={onClose}>
+      <button
+        className="mt-4 px-4 py-2 bg-yellow-500 text-white rounded-lg"
+        onClick={onClose}
+      >
         Fermer
       </button>
     </div>
@@ -20,5 +28,3 @@ const RecalculatePopup: React.FC<RecalculatePopupProps> = ({ visible, onClose })
 };
 
 export default RecalculatePopup;
-
-

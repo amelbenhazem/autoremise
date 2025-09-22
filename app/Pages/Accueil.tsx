@@ -1,21 +1,22 @@
 "use client";
-import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
-import { usePdfGeneratorForced } from "../hooks";
-import { useHomePage } from "../hooks";
-import { UploadZone, FileList, PWAInstallPrompt, PWAStatus } from "../components";
-import { useRouter } from "next/navigation";
-import { useState, useEffect } from "react";
-import { hasPermission, User } from "../hooks/roles";
-import Header from "../components/Header";
-import { validateHeaders } from "../../utils/validators";
+import { motion, AnimatePresence } from "framer-motion"; // Pour les animations fluides
+import Image from "next/image";                         // Optimisation des images
+import { usePdfGeneratorForced } from "../hooks";       // Hook pour générer les PDFs
+import { useHomePage } from "../hooks";                 // Hook pour gérer la logique de la page d'accueil
+import { UploadZone, FileList, PWAInstallPrompt, PWAStatus } from "../components"; // Composants UI
+import { useRouter } from "next/navigation";            // Navigation Next.js
+import { useState, useEffect } from "react";           // Hooks React
+import { hasPermission, User } from "../hooks/roles";  // Gestion des permissions utilisateur
+import Header from "../components/Header";             // Header de la page
+import { validateHeaders } from "../../utils/validators"; // Validation des en-têtes Excel
 
+//  Composant principal de la page d'accueil
 export default function Accueil() {
 	const router = useRouter();
-	const [successPopup, setSuccessPopup] = useState(false);
-	const [currentUser, setCurrentUser] = useState<User | null>(null);
+	const [successPopup, setSuccessPopup] = useState(false); // État pour afficher le popup de succès
+	const [currentUser, setCurrentUser] = useState<User | null>(null); // Utilisateur courant
 
-	// Récupérer l'utilisateur courant depuis localStorage
+	//  Récupérer l'utilisateur courant depuis localStorage
 	useEffect(() => {
 		const storedUser = localStorage.getItem("currentUser");
 		if (storedUser) {
@@ -23,17 +24,17 @@ export default function Accueil() {
 		}
 	}, []);
 
-	// Hook personnalisé
+	// Hook personnalisé pour gérer l'état de la page
 	const {
-		step,
-		bank,
-		type,
-		files,
-		excelData,
-		uploadProgress,
-		loading,
-		mapping,
-		fileInputRef,
+		step,           // Étape actuelle (0: banque, 1: type, 2: upload, 3: génération)
+		bank,           // Banque sélectionnée
+		type,           // Type de remise
+		files,          // Fichiers uploadés
+		excelData,      // Données Excel traitées
+		uploadProgress, // Progression upload
+		loading,        // Indicateur de chargement
+		mapping,        // Mapping zones/fonds
+		fileInputRef,   // Référence input fichier
 		handleBankChange,
 		handleTypeChange,
 		handleExcelUpload,
@@ -45,27 +46,32 @@ export default function Accueil() {
 
 	const { generatePDFs: generatePDFsFromHook } = usePdfGeneratorForced();
 
+	//  Fonction pour générer les PDFs
 	const handleGeneratePDFs = async () => {
+		// Vérification banque/type sélectionnés
 		if (!bank || !type) {
 		  alert("Veuillez sélectionner une banque et un type.");
 		  return;
 		}
 	  
+		// Vérification du mapping
 		if (!mapping || !mapping.background || !Array.isArray(mapping.zones) || mapping.zones.length === 0) {
 		  alert("Mapping manquant ou incomplet pour la banque/type sélectionné.");
 		  return;
 		}
 	  
+		// Vérification des données Excel
 		if (!excelData || excelData.length === 0) {
 		  alert("Aucune donnée Excel détectée.");
 		  return;
 		}
 	  
-		// Normaliser données Excel
+		// Normaliser les lignes Excel
 		let normalizedRows: any[] = [];
 		let headers: string[] = [];
 	  
 		if (Array.isArray(excelData[0])) {
+		  // Cas où Excel est un tableau de tableaux
 		  headers = (excelData[0] as any[]).map((h) => String(h ?? "").trim());
 		  const dataRows = (excelData as any[]).slice(1);
 		  normalizedRows = dataRows
@@ -79,6 +85,7 @@ export default function Accueil() {
 			})
 			.filter((obj) => Object.keys(obj).length > 0);
 		} else if (typeof excelData[0] === "object" && excelData[0] !== null) {
+		  // Cas où Excel est un tableau d'objets
 		  normalizedRows = excelData as any[];
 		  headers = Object.keys(normalizedRows[0] as Record<string, any>);
 		} else {
@@ -91,7 +98,7 @@ export default function Accueil() {
 		  return;
 		}
 	  
-		// 🔑 Ici on déclare normalizeField
+		// Fonction pour normaliser les champs (minuscules + sans accents + sans espaces)
 		function normalizeField(field: string): string {
 		  return field
 			.toLowerCase()
@@ -100,6 +107,7 @@ export default function Accueil() {
 			.replace(/\s+/g, "");
 		}
 	  
+		// Champs requis pour la génération
 		const requiredFields: string[] = (mapping.zones || [])
 		  .filter(
 			(z: any) =>
@@ -108,7 +116,8 @@ export default function Accueil() {
 			  (z.optionValue === undefined || z.optionValue === null || z.optionValue === "")
 		  )
 		  .map((z: any) => z.field.trim());
-		// ✅ Vérification stricte des en-têtes selon banque/type si disponible
+
+		// Vérification stricte des en-têtes selon banque/type
 		if (bank && type) {
 		  const headerValidation = validateHeaders(headers, bank, type);
 		  if (headerValidation.missing.length > 0) {
@@ -121,7 +130,7 @@ export default function Accueil() {
 
 		const uniqueRequired: string[] = Array.from(new Set<string>(requiredFields));
 	  
-		// ✅ ICI matched doit être déclaré
+		// Vérification que suffisamment de champs correspondent
 		const matched = uniqueRequired.filter((f) =>
 		  headers.some((h) => normalizeField(h) === normalizeField(f))
 		);
@@ -139,29 +148,36 @@ export default function Accueil() {
 		const editorWidth = mapping.bgWidth || 800;
 		const editorHeight = mapping.bgHeight || 600;
 	  
+		// Génération des PDFs via le hook
 		await generatePDFsFromHook(mapping, normalizedRows, editorWidth, editorHeight, { drawBackground: false });
 	  
+		// Affichage du popup succès + réinitialisation upload
 		setSuccessPopup(true);
 		resetUpload();
 		if (fileInputRef.current) fileInputRef.current.value = "";
-	  };
-	  
+	};
 
+	// Rendu JSX
 	return (
 		<div className="min-h-screen bg-[#89ccff] flex flex-col">
 			{/* Header full width */}
 			<Header />
+
+			{/* Container central */}
 			<div className="min-h-screen flex items-center justify-center bg-[#89ccff] px-2 sm:px-4 relative">
 
+				{/* Statut PWA */}
 				<PWAStatus />
 				<PWAInstallPrompt />
 
+				{/* Card principale */}
 				<motion.div
 					className="w-full max-w-lg sm:max-w-xl md:max-w-2xl mx-auto p-4 sm:p-8 rounded-2xl sm:rounded-3xl shadow-2xl bg-white/90"
 					initial={{ scale: 0.95, opacity: 0 }}
 					animate={{ scale: 1, opacity: 1 }}
 					transition={{ duration: 0.5 }}
 				>
+					{/* Logo */}
 					<div className="flex flex-col items-center mb-6 sm:mb-8">
 						<Image
 							src="/logo-shamashit.png"
@@ -174,8 +190,9 @@ export default function Accueil() {
 						/>
 					</div>
 
-					{/* Steps 1 à 3 (banque, type, upload) */}
+					{/* Étapes dynamiques 0 à 2 */}
 					<AnimatePresence>
+						{/* Étape 0 : Sélection banque */}
 						{step === 0 && (
 							<motion.div
 								key="bank"
@@ -204,6 +221,7 @@ export default function Accueil() {
 					</AnimatePresence>
 
 					<AnimatePresence>
+						{/* Étape 1 : Sélection type */}
 						{step === 1 && (
 							<motion.div
 								key="type"
@@ -228,6 +246,7 @@ export default function Accueil() {
 					</AnimatePresence>
 
 					<AnimatePresence>
+						{/* Étape 2 : Upload fichier Excel */}
 						{step === 2 && (
 							<UploadZone
 								onDrop={handleDrop}
@@ -239,8 +258,10 @@ export default function Accueil() {
 						)}
 					</AnimatePresence>
 
+					{/* Liste des fichiers uploadés */}
 					<FileList files={files} uploadProgress={uploadProgress} />
 
+					{/* Étape 3 : Bouton générer PDF */}
 					{step === 3 && files.length > 0 && (
 						<motion.div
 							initial={{ opacity: 0, scale: 0.95 }}
@@ -258,6 +279,7 @@ export default function Accueil() {
 						</motion.div>
 					)}
 
+					{/* Popup succès */}
 					{successPopup && (
 						<div className="relative bg-white rounded-xl p-4 shadow-lg text-center mx-auto mt-4 max-w-md">
 							<h2 className="text-green-600 font-bold text-lg mb-2"> Succès !</h2>

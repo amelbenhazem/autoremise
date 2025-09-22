@@ -33,4 +33,3 @@ export function hasPermission(action: string, user: User | null) {
     permissions[user.role as keyof typeof permissions] || [];
   return rolePermissions.includes(action);
 }
-

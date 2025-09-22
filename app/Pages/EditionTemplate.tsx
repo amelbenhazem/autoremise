@@ -35,12 +35,12 @@ export default function TemplateEditor() {
 	const [bgHeight, setBgHeight] = useState<number>(600);
 	const [showRecalculatePopup, setShowRecalculatePopup] = useState(false);
 	const [forceCmDimensions, setForceCmDimensions] = useState(false);
-	const [drawBackground, setDrawBackground] = useState(true); // 🔑 Option pour dessiner le fond
+	const [drawBackground, setDrawBackground] = useState(true); // Option pour dessiner le fond
 	// Les anciens toggles de générateur sont supprimés; on utilise toujours le nouveau générateur
 	const router = useRouter();
   	const currentUser = JSON.parse(localStorage.getItem('currentUser') || 'null');
 	
-	// 🔑 Utiliser les générateurs PDF
+	// Utiliser les générateurs PDF
 	const { generatePDFs: generatePDFsForced } = usePdfGeneratorForced();
 
 	useEffect(() => {
@@ -197,7 +197,7 @@ export default function TemplateEditor() {
 			if (Array.isArray(json.zones)) {
 				setZones(json.zones);
 				
-				// ✅ Restaurer les dropdowns depuis les zones importées
+				//  Restaurer les dropdowns depuis les zones importées
 				const importedDropdowns: Record<string, string[]> = {};
 				json.zones.forEach((zone: any) => {
 					if (zone.field && zone.options !== undefined) {
@@ -231,7 +231,7 @@ export default function TemplateEditor() {
 			if (Array.isArray(json.zones)) {
 				setZones(json.zones);
 				
-				// ✅ Restaurer les dropdowns depuis les zones importées
+				// Restaurer les dropdowns depuis les zones importées
 				const importedDropdowns: Record<string, string[]> = {};
 				json.zones.forEach((zone: any) => {
 					if (zone.field && zone.options !== undefined) {
@@ -302,14 +302,14 @@ const calculatePdfFontSize = (text: string, zoneWidth: number, zoneHeight: numbe
 
 // Code PDF supprimé - tout est maintenant dans usePdfGeneratorForced
 
-	// 🔑 Fonction pour forcer les dimensions en cm
+	// Fonction pour forcer les dimensions en cm
 	const handleForceCmDimensions = (width: number, height: number) => {
-		console.log(`🔑 Dimensions forcées en cm: ${width} x ${height}`);
+		console.log(` Dimensions forcées en cm: ${width} x ${height}`);
 		setForceCmDimensions(true);
 		// Les dimensions sont déjà mises à jour par le DimensionsPanel
 	};
 
-	// 🔑 Fonction de génération PDF - toujours le nouveau générateur
+	// Fonction de génération PDF - toujours le nouveau générateur
 	const handleGeneratePDFs = async () => {
 		await generatePDFsForced(
 			importedMapping,
@@ -359,7 +359,7 @@ const calculatePdfFontSize = (text: string, zoneWidth: number, zoneHeight: numbe
 			background,
 			zones: zones.map(zone => {
 				let options: string[] | undefined = undefined;
-				// ✅ Inclure les listes déroulantes même si elles sont vides
+				// Inclure les listes déroulantes même si elles sont vides
 				if (dropdowns[zone.field] !== undefined) {
 					options = dropdowns[zone.field];
 				} else if (excelRows.length > 0 && zone.field) {
@@ -517,5 +517,4 @@ const calculatePdfFontSize = (text: string, zoneWidth: number, zoneHeight: numbe
 			);
 
 }
-
 

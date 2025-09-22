@@ -1,18 +1,20 @@
 "use client";
 
-import { motion } from "framer-motion";
-import Image from "next/image";
+import { motion } from "framer-motion"; // Pour les animations
+import Image from "next/image";         // Optimisation des images Next.js
 
+// Composant affiché lorsque l'utilisateur est hors ligne
 export default function OfflinePage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#89ccff] px-4">
+      {/* Container principal centré */}
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0, y: 20 }} // Animation initiale
+        animate={{ opacity: 1, y: 0 }}  // Animation finale
         transition={{ duration: 0.6 }}
         className="max-w-md w-full bg-white rounded-2xl shadow-xl p-8 text-center"
       >
-        {/* Icône de connexion */}
+
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
@@ -26,6 +28,7 @@ export default function OfflinePage() {
               stroke="currentColor"
               viewBox="0 0 24 24"
             >
+              {/* Croix indiquant absence de connexion */}
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
@@ -57,19 +60,19 @@ export default function OfflinePage() {
           de base même sans connexion internet.
         </motion.p>
 
-        {/* Fonctionnalités disponibles */}
+        {/* Fonctionnalités disponibles hors ligne */}
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
           className="bg-blue-50 rounded-lg p-4 mb-6"
         >
-          <h3 className="font-semibold text-blue-800 mb-2">✅ Disponible hors ligne :</h3>
+          <h3 className="font-semibold text-blue-800 mb-2"> Disponible hors ligne :</h3>
           <ul className="text-sm text-blue-700 space-y-1">
-            <li>• Génération de PDFs</li>
-            <li>• Traitement des fichiers Excel</li>
-            <li>• Templates de mapping</li>
-            <li>• Éditeur de templates</li>
+            <li>Génération de PDFs</li>
+            <li>Traitement des fichiers Excel</li>
+            <li>Templates de mapping</li>
+            <li>Éditeur de templates</li>
           </ul>
         </motion.div>
 
@@ -80,6 +83,7 @@ export default function OfflinePage() {
           transition={{ delay: 0.6 }}
           className="space-y-3"
         >
+          {/* Bouton pour retourner à l'accueil */}
           <button
             onClick={() => window.location.href = '/'}
             className="w-full bg-blue-500 hover:bg-blue-600 text-white font-semibold py-3 px-6 rounded-lg transition-colors duration-200"
@@ -87,6 +91,7 @@ export default function OfflinePage() {
             Retour à l'Accueil
           </button>
           
+          {/* Bouton pour réessayer la connexion */}
           <button
             onClick={() => window.location.reload()}
             className="w-full bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold py-3 px-6 rounded-lg transition-colors duration-200"
@@ -95,7 +100,7 @@ export default function OfflinePage() {
           </button>
         </motion.div>
 
-        {/* Logo */}
+        {/* Logo en bas */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
@@ -114,4 +119,3 @@ export default function OfflinePage() {
     </div>
   );
 }
-

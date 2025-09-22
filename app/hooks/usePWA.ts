@@ -1,46 +1,47 @@
 import { useState, useEffect } from 'react';
 
+//  Définition d'un type pour l'événement BeforeInstallPrompt
+//    Cet événement permet de détecter si l'application peut être installée
 interface BeforeInstallPromptEvent extends Event {
-  readonly platforms: string[];
+  readonly platforms: string[]; // plateformes cibles (Android, Windows…)
   readonly userChoice: Promise<{
-    outcome: 'accepted' | 'dismissed';
+    outcome: 'accepted' | 'dismissed'; // résultat du choix de l'utilisateur
     platform: string;
   }>;
-  prompt(): Promise<void>;
+  prompt(): Promise<void>; // méthode pour déclencher la popup d'installation
 }
 
+// Interface représentant l'état de la PWA
 interface PWAState {
-  isInstallable: boolean;
-  isInstalled: boolean;
-  isOnline: boolean;
-  isStandalone: boolean;
-  installPrompt: BeforeInstallPromptEvent | null;
+  isInstallable: boolean;               // L'app peut être installée
+  isInstalled: boolean;                 // L'app est déjà installée
+  isOnline: boolean;                     // Connexion réseau active
+  isStandalone: boolean;                 // L'app fonctionne en mode standalone (hors navigateur)
+  installPrompt: BeforeInstallPromptEvent | null; // Événement d'installation capturé
 }
 
+// Hook personnalisé pour gérer l'état PWA
 export const usePWA = () => {
   const [pwaState, setPwaState] = useState<PWAState>({
     isInstallable: false,
     isInstalled: false,
-    isOnline: true, // Valeur par défaut pour éviter l'erreur d'hydratation
+    isOnline: true, // Valeur par défaut pour éviter les erreurs SSR/hydratation
     isStandalone: false,
     installPrompt: null,
   });
 
   useEffect(() => {
-    // Initialiser l'état réel côté client
-    setPwaState(prev => ({
-      ...prev,
-      isOnline: navigator.onLine,
-    }));
+    //  Initialisation de l'état en ligne
+    setPwaState(prev => ({ ...prev, isOnline: navigator.onLine }));
 
-    // Détecter si l'app est installée (mode standalone)
+    // Détecter si l'app est en mode standalone
     const isStandalone = window.matchMedia('(display-mode: standalone)').matches ||
-                        (window.navigator as any).standalone ||
-                        document.referrer.includes('android-app://');
+                        (window.navigator as any).standalone || // iOS
+                        document.referrer.includes('android-app://'); // Android
 
-    // Détecter si l'app est installable
+    // Événement déclenché quand l'app peut être installée
     const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
+      e.preventDefault(); // Empêche la popup automatique
       setPwaState(prev => ({
         ...prev,
         isInstallable: true,
@@ -48,7 +49,7 @@ export const usePWA = () => {
       }));
     };
 
-    // Détecter si l'app a été installée
+    //  Événement déclenché après installation réussie
     const handleAppInstalled = () => {
       setPwaState(prev => ({
         ...prev,
@@ -58,23 +59,24 @@ export const usePWA = () => {
       }));
     };
 
-    // Gérer les changements de connexion
+    // Gestion de l'état de connexion
     const handleOnline = () => setPwaState(prev => ({ ...prev, isOnline: true }));
     const handleOffline = () => setPwaState(prev => ({ ...prev, isOnline: false }));
 
-    // Écouter les événements PWA
+    // Attacher les événements globaux
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
-    // Mettre à jour l'état initial
+    //  Mettre à jour l'état initial
     setPwaState(prev => ({
       ...prev,
       isStandalone,
       isInstalled: isStandalone,
     }));
 
+    //  Nettoyage des listeners à la destruction du composant
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
       window.removeEventListener('appinstalled', handleAppInstalled);
@@ -83,17 +85,16 @@ export const usePWA = () => {
     };
   }, []);
 
-  // Fonction pour installer l'app
+  // Fonction pour déclencher l'installation de la PWA
   const installApp = async (): Promise<boolean> => {
-    if (!pwaState.installPrompt) {
-      return false;
-    }
+    if (!pwaState.installPrompt) return false; // Pas d'événement disponible
 
     try {
-      await pwaState.installPrompt.prompt();
-      const choiceResult = await pwaState.installPrompt.userChoice;
+      await pwaState.installPrompt.prompt(); // Affiche la popup
+      const choiceResult = await pwaState.installPrompt.userChoice; // Attendre le choix de l'utilisateur
       
       if (choiceResult.outcome === 'accepted') {
+        // Installation acceptée → mettre à jour l'état
         setPwaState(prev => ({
           ...prev,
           isInstallable: false,
@@ -108,7 +109,7 @@ export const usePWA = () => {
     }
   };
 
-  // Fonction pour partager (si supporté)
+  //  Fonction pour partager l'application
   const shareApp = async (): Promise<boolean> => {
     if (!navigator.share) {
       // Fallback : copier l'URL dans le presse-papiers
@@ -122,6 +123,7 @@ export const usePWA = () => {
     }
 
     try {
+      // Utiliser l'API Web Share si disponible
       await navigator.share({
         title: 'AutoRemise - Générateur de Remises Bancaires',
         text: 'Générateur automatique de documents PDF de remise bancaire',
@@ -134,6 +136,7 @@ export const usePWA = () => {
     }
   };
 
+  // Retourne l'état PWA + fonctions d'installation et partage
   return {
     ...pwaState,
     installApp,
