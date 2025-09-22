@@ -122,6 +122,21 @@ AMEN: {
       "echance"
     ]
   },
+  ATTIJARI_BANK: {
+    effet: [
+      "Nom du tiré",
+      "Banque",
+      "Ville",
+      "Échéance",
+      "Montant",
+      "RS",
+      "NumeroCompte",
+      "NomAgence", 
+      "Total" 
+      
+    ]
+  }
+,  
   "BANK TUNISIE": {
     cheque: [
       "Comptea",

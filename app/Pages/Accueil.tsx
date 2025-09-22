@@ -215,6 +215,8 @@ export default function Accueil() {
 									<option value="BNA">BNA</option>
 									<option value="UBCI">UBCI</option>
 									<option value="BANQUE DE TUNISIE">BANQUE DE TUNISIE</option>
+									<option value="ATTIJARI BANK">ATTIJARI BANK</option>
+
 								</select>
 							</motion.div>
 						)}
