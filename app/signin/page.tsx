@@ -1,6 +1,5 @@
-
 import SignIn from '../Pages/SignIn';
 
-export default function EditionTemplatePage() {
+export default function SignInPage() {
   return <SignIn />;
 }

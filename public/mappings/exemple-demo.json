@@ -1,0 +1,31 @@
+{
+  "bgWidth": 595,
+  "bgHeight": 280,
+  "background": "",
+  "zones": [
+    {
+      "id": "montant",
+      "x": 40,
+      "y": 36,
+      "width": 140,
+      "height": 22,
+      "field": "Montant"
+    },
+    {
+      "id": "beneficiaire",
+      "x": 40,
+      "y": 80,
+      "width": 260,
+      "height": 22,
+      "field": "Nom"
+    },
+    {
+      "id": "date",
+      "x": 400,
+      "y": 36,
+      "width": 120,
+      "height": 22,
+      "field": "Date"
+    }
+  ]
+}

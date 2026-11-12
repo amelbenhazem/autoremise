@@ -54,8 +54,6 @@ const DimensionsPanel: React.FC<DimensionsPanelProps> = ({
               // Mise à jour de l'état avec la nouvelle largeur en points
               setBgWidth(newWidth);
 
-              console.log('Largeur saisie en cm :', cmValue, '-> points :', newWidth);
-              
               // Si la fonction de callback existe, informer le parent
               if (onForceCmDimensions) {
                 onForceCmDimensions(cmValue, bgHeight / 28.3464567);
@@ -81,8 +79,7 @@ const DimensionsPanel: React.FC<DimensionsPanelProps> = ({
               const newHeight = cmValue * 28.3464567;
 
               setBgHeight(newHeight);
-              console.log('Hauteur saisie en cm :', cmValue, '-> points :', newHeight);
-              
+
               if (onForceCmDimensions) {
                 onForceCmDimensions(bgWidth / 28.3464567, cmValue);
               }

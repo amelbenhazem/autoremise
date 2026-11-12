@@ -4,25 +4,13 @@ import Image from "next/image";                         // Optimisation des imag
 import { usePdfGeneratorForced } from "../hooks";       // Hook pour générer les PDFs
 import { useHomePage } from "../hooks";                 // Hook pour gérer la logique de la page d'accueil
 import { UploadZone, FileList, PWAInstallPrompt, PWAStatus } from "../components"; // Composants UI
-import { useRouter } from "next/navigation";            // Navigation Next.js
-import { useState, useEffect } from "react";           // Hooks React
-import { hasPermission, User } from "../hooks/roles";  // Gestion des permissions utilisateur
+import { useState } from "react";           // Hooks React
 import Header from "../components/Header";             // Header de la page
 import { validateHeaders } from "../../utils/validators"; // Validation des en-têtes Excel
 
 //  Composant principal de la page d'accueil
 export default function Accueil() {
-	const router = useRouter();
 	const [successPopup, setSuccessPopup] = useState(false); // État pour afficher le popup de succès
-	const [currentUser, setCurrentUser] = useState<User | null>(null); // Utilisateur courant
-
-	//  Récupérer l'utilisateur courant depuis localStorage
-	useEffect(() => {
-		const storedUser = localStorage.getItem("currentUser");
-		if (storedUser) {
-			setCurrentUser(JSON.parse(storedUser));
-		}
-	}, []);
 
 	// Hook personnalisé pour gérer l'état de la page
 	const {
@@ -32,12 +20,10 @@ export default function Accueil() {
 		files,          // Fichiers uploadés
 		excelData,      // Données Excel traitées
 		uploadProgress, // Progression upload
-		loading,        // Indicateur de chargement
 		mapping,        // Mapping zones/fonds
 		fileInputRef,   // Référence input fichier
 		handleBankChange,
 		handleTypeChange,
-		handleExcelUpload,
 		handleDrop,
 		handleDragOver,
 		handleFileInput,
@@ -215,8 +201,6 @@ export default function Accueil() {
 									<option value="BNA">BNA</option>
 									<option value="UBCI">UBCI</option>
 									<option value="BANQUE DE TUNISIE">BANQUE DE TUNISIE</option>
-									<option value="ATTIJARI BANK">ATTIJARI BANK</option>
-
 								</select>
 							</motion.div>
 						)}

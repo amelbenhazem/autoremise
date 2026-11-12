@@ -1,12 +1,16 @@
 {
-  "name": "remise",
+  "name": "autoremise",
   "version": "0.1.0",
   "private": true,
+  "description": "Générateur de remises bancaires PDF à partir d'un fichier Excel",
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
+  },
+  "engines": {
+    "node": ">=18"
   },
   "dependencies": {
     "blueimp-load-image": "^5.16.0",
@@ -18,7 +22,6 @@
     "pdfjs-dist": "^5.3.31",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "react-dropzone": "^14.3.8",
     "react-rnd": "^10.5.2",
     "xlsx": "^0.18.5",
     "xlsx-populate": "^1.21.0"

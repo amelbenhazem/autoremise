@@ -13,8 +13,6 @@ export const useHomePage = () => {
   const [mapping, setMapping] = useState<any | null>(null); // Mapping JSON correspondant à banque/type
   const fileInputRef = useRef<HTMLInputElement>(null); // Référence input fichier pour réinitialisation
 
-  console.log("useHomePage hook loaded - version 2.3");
-
   //  Fonction pour réinitialiser complètement le workflow
   const resetUpload = () => {
     setStep(0);
@@ -28,7 +26,6 @@ export const useHomePage = () => {
     if (fileInputRef.current) {
       fileInputRef.current.value = ""; // Réinitialisation de l'input HTML
     }
-    console.log("Upload reset ");
   };
 
   // Charger le mapping JSON correspondant à la banque et au type
@@ -36,7 +33,6 @@ export const useHomePage = () => {
     if (bank && type) {
       const currentMappingKey = `${bank}-${type}`;
       if (mapping && mapping._mappingKey === currentMappingKey) {
-        console.log("Mapping déjà chargé pour", currentMappingKey);
         return;
       }
 
@@ -66,7 +62,6 @@ export const useHomePage = () => {
       }
       if (bank.toUpperCase() === "AMEN" && type.toLowerCase() === "effet") {
         candidates.unshift("/mappings/effet_amen_bank.json");
-        console.log("AMEN effet détecté, ajout de effet_amen_bank.json en priorité");
       }
       if (bank.toUpperCase() === "BANQUE DE TUNISIE" && type.toLowerCase() === "cheque") {
         candidates.unshift("/mappings/chequetunisie.json");
@@ -75,7 +70,6 @@ export const useHomePage = () => {
         candidates.unshift("/mappings/effetbanktunisia.json");
       }
 
-      console.log("Tentatives de chargement mapping:", candidates);
       let cancelled = false;
 
       // Chargement asynchrone du mapping
@@ -87,14 +81,11 @@ export const useHomePage = () => {
             if (!res.ok) throw new Error(`HTTP ${res.status}`);
             const json = await res.json();
             if (!cancelled) {
-              console.log("Mapping chargé avec succès depuis:", path);
               setMapping({ ...json, _mappingKey: currentMappingKey });
               return;
             }
-          } catch (e) {
-            if (!cancelled) {
-              console.warn("Échec chargement mapping:", path, e);
-            }
+          } catch {
+            // try next candidate
           }
         }
         if (!cancelled) {
@@ -107,7 +98,6 @@ export const useHomePage = () => {
         cancelled = true; // Annule la boucle si le composant se démonte
       };
     } else {
-      console.log("bank ou type manquant, mapping mis à null");
       setMapping(null);
     }
   }, [bank, type, mapping?._mappingKey]);

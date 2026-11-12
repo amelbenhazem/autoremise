@@ -29,7 +29,6 @@ export const usePdfGeneratorForced = () => {
     // SOLUTION SIMPLE: conversion des dimensions en cm
     const widthCm = bgWidth / 28.3464567;  // points → cm
     const heightCm = bgHeight / 28.3464567;
-    console.log(`Dimensions PDF: ${widthCm.toFixed(2)} x ${heightCm.toFixed(2)} cm`);
 
     // Dimensions PDF en points
     const pdfWidth = cmToPoints(widthCm);

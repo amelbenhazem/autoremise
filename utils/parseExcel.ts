@@ -88,10 +88,7 @@ export async function parseExcel(file: File): Promise<{ rows: any[], dropdowns: 
   // Ajouter les champs manquants pour la banque/type détectés
   if (detectedBank && detectedType && requiredFieldsMap[detectedBank]?.[detectedType]) {
     const expectedFields = requiredFieldsMap[detectedBank][detectedType];
-    console.log(` Banque détectée: ${detectedBank}, Type: ${detectedType}`);
-    console.log(` Champs attendus:`, expectedFields);
-    console.log(` Champs présents:`, existingFields);
-    
+
     expectedFields.forEach(field => {
       if (!existingFields.includes(field)) {
         const maxIndex = Math.max(...headerMeta.map(h => h.index), values[0]?.length || 0);
@@ -100,7 +97,6 @@ export async function parseExcel(file: File): Promise<{ rows: any[], dropdowns: 
           base: field,
           options: []
         });
-        console.log(` Champ ajouté: ${field}`);
       }
     });
   }
@@ -172,11 +168,8 @@ export async function parseExcel(file: File): Promise<{ rows: any[], dropdowns: 
   typicalDropdownFields.forEach(field => {
     if (headerMeta.some(h => h.base === field) && !dropdowns[field]) {
       dropdowns[field] = []; // permettre saisie manuelle
-      console.log(` Liste déroulante vide créée pour: ${field}`);
     }
   });
-
-  console.log(' Tous les champs détectés :', JSON.stringify(dropdowns, null, 2));
 
   // Retourner les lignes et les dropdowns
   return { rows, dropdowns };

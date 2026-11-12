@@ -4,7 +4,7 @@ import { User } from "../hooks/roles";
 import { useRouter } from 'next/navigation';
 
 const mockUsers: User[] = [
-  { id: 1, nom: 'Amal', email: 'employe@banque.com', role: 'EmployeBanque', password: 'employe123' },
+  { id: 1, nom: 'Employé', email: 'employe@banque.com', role: 'EmployeBanque', password: 'employe123' },
   { id: 2, nom: 'Admin', email: 'admin@system.com', role: 'Administrateur', password: 'admin123' },
 ];
 

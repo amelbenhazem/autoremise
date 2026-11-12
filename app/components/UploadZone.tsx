@@ -11,31 +11,25 @@ interface UploadZoneProps {
 }
 
 export const UploadZone = ({ onDrop, onDragOver, onClick, onChange, fileInputRef }: UploadZoneProps) => {
-  //Handlers locaux pour ajouter des logs et gérer les événements
   const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    console.log(' Drop event triggered');
-    e.preventDefault(); // Empêche le comportement par défaut (ex: ouverture du fichier)
-    e.stopPropagation(); // Empêche la propagation de l'événement
-    onDrop(e); // Appelle le callback fourni en props
+    e.preventDefault();
+    e.stopPropagation();
+    onDrop(e);
   };
 
   const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    console.log(' DragOver event triggered');
     e.preventDefault();
     e.stopPropagation();
     onDragOver(e);
   };
 
   const handleDragEnter = (e: React.DragEvent<HTMLDivElement>) => {
-    console.log('DragEnter event triggered');
     e.preventDefault();
     e.stopPropagation();
-    // Utile pour ajouter des effets visuels lorsque le fichier survole la zone
   };
 
   const handleClick = () => {
-    console.log(' Click event triggered');
-    onClick(); // Déclenche le callback pour ouvrir le selecteur de fichiers
+    onClick();
   };
 
   return (
